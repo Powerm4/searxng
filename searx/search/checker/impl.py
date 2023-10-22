@@ -36,8 +36,8 @@ HTML_TAGS = [
 
 
 def get_check_no_html():
-    rep = ['<' + tag + '[^\>]*>' for tag in HTML_TAGS]
-    rep += ['</' + tag + '>' for tag in HTML_TAGS]
+    rep = [f'<{tag}' + '[^\>]*>' for tag in HTML_TAGS]
+    rep += [f'</{tag}>' for tag in HTML_TAGS]
     pattern = re.compile('|'.join(rep))
 
     def f(text):
@@ -54,9 +54,7 @@ def _is_url(url):
         result = urlparse(url)
     except ValueError:
         return False
-    if result.scheme not in ('http', 'https'):
-        return False
-    return True
+    return result.scheme in ('http', 'https')
 
 
 @functools.lru_cache(maxsize=8192)
@@ -112,15 +110,12 @@ def _is_url_image(image_url) -> bool:
         return False
 
     if image_url.startswith('//'):
-        image_url = 'https:' + image_url
+        image_url = f'https:{image_url}'
 
     if image_url.startswith('data:'):
         return image_url.startswith('data:image/')
 
-    if not _is_url(image_url):
-        return False
-
-    return _download_and_check_if_image(image_url)
+    return _download_and_check_if_image(image_url) if _is_url(image_url) else False
 
 
 def _search_query_to_dict(search_query: SearchQuery) -> typing.Dict[str, typing.Any]:
@@ -203,11 +198,10 @@ class ResultContainerTests:
     def _record_error(self, message: str, *args) -> None:
         sq = _search_query_to_dict(self.search_query)
         sqstr = ' '.join(['{}={!r}'.format(k, v) for k, v in sq.items()])
-        self.test_results.add_error(self.test_name, message, *args, '(' + sqstr + ')')
+        self.test_results.add_error(self.test_name, message, *args, f'({sqstr})')
 
     def _add_language(self, text: str) -> typing.Optional[str]:
-        langStr = detect_language(text)
-        if langStr:
+        if langStr := detect_language(text):
             self.languages.add(langStr)
             self.test_results.add_language(langStr)
         return None
@@ -263,7 +257,7 @@ class ResultContainerTests:
     def check_basic(self):
         if len(self.result_container.unresponsive_engines) > 0:
             for message in self.result_container.unresponsive_engines:
-                self._record_error(message[1] + ' ' + (message[2] or ''))
+                self._record_error(f'{message[1]} ' + (message[2] or ''))
             self.stop_test = True
             return
 
@@ -292,7 +286,7 @@ class ResultContainerTests:
 
         Detected using pycld3, may be not accurate"""
         if lang not in self.languages:
-            self._record_error(lang + ' not found')
+            self._record_error(f'{lang} not found')
 
     def not_empty(self):
         """Check the ResultContainer has at least one answer or infobox or result"""
@@ -307,7 +301,7 @@ class ResultContainerTests:
         if len(self.result_container.infoboxes) > 0:
             result_types.add('infoboxes')
 
-        if len(result_types) == 0:
+        if not result_types:
             self._record_error('No result')
 
     def one_title_contains(self, title: str):
@@ -347,7 +341,7 @@ class CheckerTests:
                         diff2_str = ', '.join(['{}={!r}'.format(k, v2) for (k, (v1, v2)) in diff.items()])
                         self.test_results.add_error(
                             self.test_name,
-                            'results are identical for {} and {} ({})'.format(diff1_str, diff2_str, common_str),
+                            f'results are identical for {diff1_str} and {diff2_str} ({common_str})',
                         )
 
 
@@ -377,7 +371,7 @@ class Checker:
             p.append(l)
 
         for kwargs in itertools.product(*p):
-            kwargs = {k: v for k, v in kwargs}
+            kwargs = dict(kwargs)
             query = kwargs['query']
             params = dict(kwargs)
             del params['query']

@@ -63,22 +63,20 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
     json = resp.json()
 
-    for result in json['data']:
-        results.append(
-            {
-                'template': 'images.html',
-                'title': '',
-                'content': f"{result['category']} / {result['purity']}",
-                'url': result['url'],
-                'img_src': result['path'],
-                'thumbnail_src': result['thumbs']['small'],
-                'img_format': result['resolution'],
-                'publishedDate': datetime.strptime(result['created_at'], '%Y-%m-%d %H:%M:%S'),
-            }
-        )
-
-    return results
+    return [
+        {
+            'template': 'images.html',
+            'title': '',
+            'content': f"{result['category']} / {result['purity']}",
+            'url': result['url'],
+            'img_src': result['path'],
+            'thumbnail_src': result['thumbs']['small'],
+            'img_format': result['resolution'],
+            'publishedDate': datetime.strptime(
+                result['created_at'], '%Y-%m-%d %H:%M:%S'
+            ),
+        }
+        for result in json['data']
+    ]

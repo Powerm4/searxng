@@ -137,11 +137,11 @@ def get_keys():
     # special cases
     results['delivery']['covid19']['*'].clear()
     for k, v in results['delivery']['*'].items():
-        results['delivery']['covid19']['*'][k] = v + ' (COVID19)'
+        results['delivery']['covid19']['*'][k] = f'{v} (COVID19)'
 
     results['opening_hours']['covid19']['*'].clear()
     for k, v in results['opening_hours']['*'].items():
-        results['opening_hours']['covid19']['*'][k] = v + ' (COVID19)'
+        results['opening_hours']['covid19']['*'][k] = f'{v} (COVID19)'
 
     return results
 
@@ -176,13 +176,12 @@ def optimize_data_lang(translations):
         del translations[language]
     language_to_delete = []
 
-    # remove entries that have the same value than the "en" entry
-    value_en = translations.get('en')
-    if value_en:
-        for language, value in translations.items():
-            if language != 'en' and value == value_en:
-                language_to_delete.append(language)
-
+    if value_en := translations.get('en'):
+        language_to_delete.extend(
+            language
+            for language, value in translations.items()
+            if language != 'en' and value == value_en
+        )
     for language in language_to_delete:
         del translations[language]
 

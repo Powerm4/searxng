@@ -101,18 +101,14 @@ def _get_communities(json):
 
 
 def _get_users(json):
-    results = []
-
-    for result in json["users"]:
-        results.append(
-            {
-                'url': result['person']['actor_id'],
-                'title': result['person']['name'],
-                'content': markdown_to_text(result['person'].get('bio', '')),
-            }
-        )
-
-    return results
+    return [
+        {
+            'url': result['person']['actor_id'],
+            'title': result['person']['name'],
+            'content': markdown_to_text(result['person'].get('bio', '')),
+        }
+        for result in json["users"]
+    ]
 
 
 def _get_posts(json):
@@ -156,8 +152,7 @@ def _get_comments(json):
     for result in json["comments"]:
         user = result['creator'].get('display_name', result['creator']['name'])
 
-        content = result['comment'].get('content', '').strip()
-        if content:
+        if content := result['comment'].get('content', '').strip():
             content = markdown_to_text(content)
 
         metadata = (

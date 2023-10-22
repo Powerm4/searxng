@@ -41,6 +41,7 @@ authentication configured to read from ``my-index`` index.
 
 """
 
+
 from json import loads, dumps
 from searx.exceptions import SearxEngineAPIException
 
@@ -49,7 +50,7 @@ base_url = 'http://localhost:9200'
 username = ''
 password = ''
 index = ''
-search_url = base_url + '/' + index + '/_search'
+search_url = f'{base_url}/{index}/_search'
 query_type = 'match'
 custom_query_json = {}
 show_metadata = False

@@ -108,7 +108,7 @@ def request(query, params):
 
     q_locale = traits.get_region(params["searxng_locale"], default='en_US')
 
-    url = api_url + f'{qwant_categ}?'
+    url = f'{api_url}{qwant_categ}?'
     args = {'q': query}
     params['raise_for_httperror'] = False
 
@@ -118,7 +118,7 @@ def request(query, params):
 
     if qwant_categ == 'web-lite':
 
-        url = web_lite_url + '?'
+        url = f'{web_lite_url}?'
         args['locale'] = q_locale.lower()
         args['l'] = q_locale.split('_')[0]
         args['s'] = params['safesearch']
@@ -158,18 +158,17 @@ def parse_web_lite(resp):
     results = []
     dom = lxml.html.fromstring(resp.text)
 
-    for item in eval_xpath_list(dom, '//section/article'):
-        if eval_xpath(item, "./span[contains(@class, 'tooltip')]"):
-            # ignore randomly interspersed advertising adds
-            continue
-        results.append(
-            {
-                'url': extract_text(eval_xpath(item, "./span[contains(@class, 'url partner')]")),
-                'title': extract_text(eval_xpath(item, './h2/a')),
-                'content': extract_text(eval_xpath(item, './p')),
-            }
-        )
-
+    results.extend(
+        {
+            'url': extract_text(
+                eval_xpath(item, "./span[contains(@class, 'url partner')]")
+            ),
+            'title': extract_text(eval_xpath(item, './h2/a')),
+            'content': extract_text(eval_xpath(item, './p')),
+        }
+        for item in eval_xpath_list(dom, '//section/article')
+        if not eval_xpath(item, "./span[contains(@class, 'tooltip')]")
+    )
     return results
 
 
@@ -277,9 +276,9 @@ def parse_web_api(resp):
                 if d:
                     content_parts.append(d)
                 if s:
-                    content_parts.append("%s: %s " % (gettext("Source"), s))
+                    content_parts.append(f'{gettext("Source")}: {s} ')
                 if c:
-                    content_parts.append("%s: %s " % (gettext("Channel"), c))
+                    content_parts.append(f'{gettext("Channel")}: {c} ')
                 content = ' // '.join(content_parts)
                 length = item['duration']
                 if length is not None:
@@ -335,12 +334,11 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = region_tag(babel.Locale.parse(eng_tag, sep='_'))
         except babel.UnknownLocaleError:
-            print("ERROR: can't determine babel locale of quant's locale %s" % eng_tag)
+            print(f"ERROR: can't determine babel locale of quant's locale {eng_tag}")
             continue
 
-        conflict = engine_traits.regions.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.regions.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.regions[sxng_tag] = eng_tag

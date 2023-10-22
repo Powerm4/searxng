@@ -24,10 +24,7 @@ api_key = ''
 
 
 def request(query, params):
-    if api_key:
-        key_form = '&key=' + api_key
-    else:
-        key_form = ''
+    key_form = f'&key={api_key}' if api_key else ''
     params['url'] = url.format(
         from_lang=params['from_lang'][1], to_lang=params['to_lang'][1], query=params['query'], key=key_form
     )
@@ -35,8 +32,7 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-    results.append(
+    return [
         {
             'url': web_url.format(
                 from_lang=resp.search_params['from_lang'][2],
@@ -44,9 +40,10 @@ def response(resp):
                 query=resp.search_params['query'],
             ),
             'title': '[{0}-{1}] {2}'.format(
-                resp.search_params['from_lang'][1], resp.search_params['to_lang'][1], resp.search_params['query']
+                resp.search_params['from_lang'][1],
+                resp.search_params['to_lang'][1],
+                resp.search_params['query'],
             ),
             'content': resp.json()['responseData']['translatedText'],
         }
-    )
-    return results
+    ]

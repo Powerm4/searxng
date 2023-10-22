@@ -36,6 +36,6 @@ def filter_request(
 ) -> werkzeug.Response | None:
 
     accept_list = [l.strip() for l in request.headers.get('Accept-Encoding', '').split(',')]
-    if not ('gzip' in accept_list or 'deflate' in accept_list):
+    if 'gzip' not in accept_list and 'deflate' not in accept_list:
         return too_many_requests(network, "HTTP header Accept-Encoding did not contain gzip nor deflate")
     return None

@@ -149,9 +149,7 @@ class JSONEncoder(json.JSONEncoder):
             return o.isoformat()
         if isinstance(o, timedelta):
             return o.total_seconds()
-        if isinstance(o, set):
-            return list(o)
-        return super().default(o)
+        return list(o) if isinstance(o, set) else super().default(o)
 
 
 def get_json_response(sq: SearchQuery, rc: ResultContainer) -> str:
@@ -167,8 +165,7 @@ def get_json_response(sq: SearchQuery, rc: ResultContainer) -> str:
         'suggestions': list(rc.suggestions),
         'unresponsive_engines': get_translated_errors(rc.unresponsive_engines),
     }
-    response = json.dumps(x, cls=JSONEncoder)
-    return response
+    return json.dumps(x, cls=JSONEncoder)
 
 
 def get_themes(templates_path):
@@ -223,11 +220,10 @@ def is_hmac_of(secret_key, value, hmac_to_check):
 
 
 def prettify_url(url, max_length=74):
-    if len(url) > max_length:
-        chunk_len = int(max_length / 2 + 1)
-        return '{0}[...]{1}'.format(url[:chunk_len], url[-chunk_len:])
-    else:
+    if len(url) <= max_length:
         return url
+    chunk_len = int(max_length / 2 + 1)
+    return '{0}[...]{1}'.format(url[:chunk_len], url[-chunk_len:])
 
 
 def contains_cjko(s: str) -> bool:
@@ -267,10 +263,7 @@ def regex_highlight_cjk(word: str) -> str:
         str: the regex pattern for the word.
     """
     rword = re.escape(word)
-    if contains_cjko(rword):
-        return fr'({rword})'
-    else:
-        return fr'\b({rword})(?!\w)'
+    return f'({rword})' if contains_cjko(rword) else f'\b({rword})(?!\w)'
 
 
 def highlight_content(content, query):
@@ -289,7 +282,7 @@ def highlight_content(content, query):
         qs = qs.replace("'", "").replace('"', '').replace(" ", "")
         if len(qs) > 0:
             queries.extend(re.findall(regex_highlight_cjk(qs), content, flags=re.I | re.U))
-    if len(queries) > 0:
+    if queries:
         for q in set(queries):
             content = re.sub(
                 regex_highlight_cjk(q), f'<span class="highlight">{q}</span>'.replace('\\', r'\\'), content
@@ -342,7 +335,7 @@ def group_engines_in_tab(engines: Iterable[Engine]) -> List[Tuple[str, Iterable[
 
     def get_subgroup(eng):
         non_tab_categories = [c for c in eng.categories if c not in tabs + [DEFAULT_CATEGORY]]
-        return non_tab_categories[0] if len(non_tab_categories) > 0 else NO_SUBGROUPING
+        return non_tab_categories[0] if non_tab_categories else NO_SUBGROUPING
 
     def group_sort_key(group):
         return (group[0] == NO_SUBGROUPING, group[0].lower())

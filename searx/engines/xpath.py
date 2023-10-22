@@ -244,7 +244,7 @@ def request(query, params):
     return params
 
 
-def response(resp):  # pylint: disable=too-many-branches
+def response(resp):    # pylint: disable=too-many-branches
     '''Scrap *results* from the response (see :ref:`engine results`).'''
     if no_result_for_http_status and resp.status_code in no_result_for_http_status:
         return []
@@ -278,34 +278,46 @@ def response(resp):  # pylint: disable=too-many-branches
 
             results.append(tmp_result)
 
-    else:
-        if cached_xpath:
+    elif cached_xpath:
+        results.extend(
+            {
+                'url': url,
+                'title': title,
+                'content': content,
+                'cached_url': cached_url + cached,
+                'is_onion': is_onion,
+            }
             for url, title, content, cached in zip(
-                (extract_url(x, search_url) for x in eval_xpath_list(dom, url_xpath)),
+                (
+                    extract_url(x, search_url)
+                    for x in eval_xpath_list(dom, url_xpath)
+                ),
                 map(extract_text, eval_xpath_list(dom, title_xpath)),
                 map(extract_text, eval_xpath_list(dom, content_xpath)),
                 map(extract_text, eval_xpath_list(dom, cached_xpath)),
-            ):
-                results.append(
-                    {
-                        'url': url,
-                        'title': title,
-                        'content': content,
-                        'cached_url': cached_url + cached,
-                        'is_onion': is_onion,
-                    }
-                )
-        else:
+            )
+        )
+    else:
+        results.extend(
+            {
+                'url': url,
+                'title': title,
+                'content': content,
+                'is_onion': is_onion,
+            }
             for url, title, content in zip(
-                (extract_url(x, search_url) for x in eval_xpath_list(dom, url_xpath)),
+                (
+                    extract_url(x, search_url)
+                    for x in eval_xpath_list(dom, url_xpath)
+                ),
                 map(extract_text, eval_xpath_list(dom, title_xpath)),
                 map(extract_text, eval_xpath_list(dom, content_xpath)),
-            ):
-                results.append({'url': url, 'title': title, 'content': content, 'is_onion': is_onion})
-
+            )
+        )
     if suggestion_xpath:
-        for suggestion in eval_xpath(dom, suggestion_xpath):
-            results.append({'suggestion': extract_text(suggestion)})
-
+        results.extend(
+            {'suggestion': extract_text(suggestion)}
+            for suggestion in eval_xpath(dom, suggestion_xpath)
+        )
     logger.debug("found %s results", len(results))
     return results

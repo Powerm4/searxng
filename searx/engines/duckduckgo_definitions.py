@@ -62,13 +62,8 @@ def result_to_text(text, htmlResult):
     result = None
     dom = html.fromstring(htmlResult)
     a = dom.xpath('//a')
-    if len(a) >= 1:
-        result = extract_text(a[0])
-    else:
-        result = text
-    if not is_broken_text(result):
-        return result
-    return None
+    result = extract_text(a[0]) if len(a) >= 1 else text
+    return result if not is_broken_text(result) else None
 
 
 def request(query, params):
@@ -97,16 +92,14 @@ def response(resp):
     infobox_id = None
     relatedTopics = []
 
-    # add answer if there is one
-    answer = search_res.get('Answer', '')
-    if answer:
+    if answer := search_res.get('Answer', ''):
         logger.debug('AnswerType="%s" Answer="%s"', search_res.get('AnswerType'), answer)
         if search_res.get('AnswerType') not in ['calc', 'ip']:
             results.append({'answer': html_to_text(answer), 'url': search_res.get('AbstractURL', '')})
 
     # add infobox
     if 'Definition' in search_res:
-        content = content + search_res.get('Definition', '')
+        content += search_res.get('Definition', '')
 
     if 'Abstract' in search_res:
         content = content + search_res.get('Abstract', '')
@@ -217,7 +210,13 @@ def response(resp):
 
     if len(heading) > 0:
         # TODO get infobox.meta.value where .label='article_title'    # pylint: disable=fixme
-        if image is None and len(attributes) == 0 and len(urls) == 1 and len(relatedTopics) == 0 and len(content) == 0:
+        if (
+            image is None
+            and not attributes
+            and len(urls) == 1
+            and not relatedTopics
+            and content == ""
+        ):
             results.append({'url': urls[0]['url'], 'title': heading, 'content': content})
         else:
             results.append(
@@ -249,7 +248,7 @@ def area_to_str(area):
     if unit is not None:
         try:
             amount = float(area.get('amount'))
-            return '{} {}'.format(amount, unit)
+            return f'{amount} {unit}'
         except ValueError:
             pass
-    return '{} {}'.format(area.get('amount', ''), area.get('unit', ''))
+    return f"{area.get('amount', '')} {area.get('unit', '')}"

@@ -99,12 +99,12 @@ def response(resp):
         address = {}
 
         # get name
-        if (
-            properties.get('osm_key') == 'amenity'
-            or properties.get('osm_key') == 'shop'
-            or properties.get('osm_key') == 'tourism'
-            or properties.get('osm_key') == 'leisure'
-        ):
+        if properties.get('osm_key') in [
+            'amenity',
+            'shop',
+            'tourism',
+            'leisure',
+        ]:
             address = {'name': properties.get('name')}
 
         # add rest of adressdata, if something is already found

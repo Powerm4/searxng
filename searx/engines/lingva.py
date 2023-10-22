@@ -32,7 +32,7 @@ def response(resp):
 
     result = loads(resp.text)
     info = result["info"]
-    from_to_prefix = "%s-%s " % (resp.search_params['from_lang'][1], resp.search_params['to_lang'][1])
+    from_to_prefix = f"{resp.search_params['from_lang'][1]}-{resp.search_params['to_lang'][1]} "
 
     if "typo" in info:
         results.append({"suggestion": from_to_prefix + info["typo"]})
@@ -42,9 +42,10 @@ def response(resp):
             if 'list' in definition:
                 for item in definition['list']:
                     if 'synonyms' in item:
-                        for synonym in item['synonyms']:
-                            results.append({"suggestion": from_to_prefix + synonym})
-
+                        results.extend(
+                            {"suggestion": from_to_prefix + synonym}
+                            for synonym in item['synonyms']
+                        )
     infobox = ""
 
     for translation in info["extraTranslations"]:

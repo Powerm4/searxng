@@ -71,9 +71,9 @@ def request(query, params):
     # - example: one year (525600 minutes) 'qft=+filterui:age-lt525600'
 
     if params['time_range']:
-        query_params['qft'] = 'filterui:age-lt%s' % time_map[params['time_range']]
+        query_params['qft'] = f"filterui:age-lt{time_map[params['time_range']]}"
 
-    params['url'] = base_url + '?' + urlencode(query_params)
+    params['url'] = f'{base_url}?{urlencode(query_params)}'
 
     return params
 

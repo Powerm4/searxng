@@ -58,11 +58,7 @@ def response(resp):
 
     pmids_results = etree.XML(resp.content)
     pmids = pmids_results.xpath('//eSearchResult/IdList/Id')
-    pmids_string = ''
-
-    for item in pmids:
-        pmids_string += item.text + ','
-
+    pmids_string = ''.join(f'{item.text},' for item in pmids)
     retrieve_notice_args = dict(pmids_string=pmids_string)
 
     retrieve_url_encoded = pubmed_retrieve_api_url.format(**retrieve_notice_args)
@@ -93,7 +89,7 @@ def response(resp):
             l = eval_xpath_getindex(author, './LastName', 0, default=None)
             f = '' if f is None else f.text
             l = '' if l is None else l.text
-            authors.append((f + ' ' + l).strip())
+            authors.append(f'{f} {l}'.strip())
 
         res_dict = {
             'template': 'paper.html',
@@ -115,8 +111,7 @@ def response(resp):
             day = eval_xpath_getindex(accepted_date, './Day', 0)
             try:
                 publishedDate = datetime.strptime(
-                    year.text + '-' + month.text + '-' + day.text,
-                    '%Y-%m-%d',
+                    f'{year.text}-{month.text}-{day.text}', '%Y-%m-%d'
                 )
                 res_dict['publishedDate'] = publishedDate
             except Exception as e:

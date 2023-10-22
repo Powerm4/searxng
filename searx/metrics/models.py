@@ -51,10 +51,7 @@ class Histogram:
     @property
     def average(self):
         with self._lock:
-            if self._count != 0:
-                return self._sum / self._count
-            else:
-                return 0
+            return self._sum / self._count if self._count != 0 else 0
 
     @property
     def quartile_percentage(self):
@@ -97,7 +94,7 @@ class Histogram:
         return None
 
     def __repr__(self):
-        return "Histogram<avg: " + str(self.average) + ", count: " + str(self._count) + ">"
+        return f"Histogram<avg: {str(self.average)}, count: {str(self._count)}>"
 
 
 class HistogramStorage:

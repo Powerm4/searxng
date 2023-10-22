@@ -57,8 +57,7 @@ def iter_processor(engine_name_list):
             else:
                 stdout.write(f'{BOLD_SEQ}Engine {name:30}{RESET_SEQ}{RED}Engine does not exist{RESET_SEQ}')
     else:
-        for name, processor in searx.search.PROCESSORS.items():
-            yield name, processor
+        yield from searx.search.PROCESSORS.items()
 
 
 # actual check & display
@@ -77,8 +76,8 @@ def run(engine_name_list, verbose):
         else:
             stdout.write(f'{BOLD_SEQ}Engine {name:30}{RESET_SEQ}{RESET_SEQ}{RED}Error{RESET_SEQ}')
             if not verbose:
-                errors = [test_name + ': ' + error for test_name, error in checker.test_results]
-                stdout.write(f'{RED}Error {str(errors)}{RESET_SEQ}\n')
+                errors = [f'{test_name}: {error}' for test_name, error in checker.test_results]
+                stdout.write(f'{RED}Error {errors}{RESET_SEQ}\n')
             else:
                 stdout.write('\n')
                 stdout.write(f'    {"found languages":15}: {" ".join(sorted(list(checker.test_results.languages)))}\n')

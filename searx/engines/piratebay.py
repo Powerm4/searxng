@@ -64,7 +64,7 @@ def response(resp):
 
     # parse results
     for result in search_res:
-        link = url + "description.php?id=" + result["id"]
+        link = f"{url}description.php?id=" + result["id"]
         magnetlink = (
             "magnet:?xt=urn:btih:" + result["info_hash"] + "&dn=" + result["name"] + "&tr=" + "&tr=".join(trackers)
         )

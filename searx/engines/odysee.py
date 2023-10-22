@@ -133,13 +133,12 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = language_tag(babel.Locale.parse(lang_tag, sep="-"))
         except babel.UnknownLocaleError:
-            print("ERROR: %s is unknown by babel" % lang_tag)
+            print(f"ERROR: {lang_tag} is unknown by babel")
             continue
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != lang_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, lang_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {lang_tag}")
             continue
 
         engine_traits.languages[sxng_tag] = lang_tag

@@ -69,8 +69,6 @@ def replace_pua_chars(text):
 
 # get response from search-request
 def response(resp):
-    results = []
-
     search_results = etree.XML(resp.content)
 
     # return empty array if there are no results
@@ -103,7 +101,7 @@ def response(resp):
 
                 if pod_is_result or not result_content:
                     if pod_id != "Input":
-                        result_content = "%s: %s" % (pod_title, content)
+                        result_content = f"{pod_title}: {content}"
 
                 # if no input pod was found, title is first plaintext pod
                 if not infobox_title:
@@ -123,18 +121,22 @@ def response(resp):
     if not result_chunks:
         return []
 
-    title = "Wolfram Alpha (%s)" % infobox_title
+    title = f"Wolfram Alpha ({infobox_title})"
 
-    # append infobox
-    results.append(
+    return [
         {
             'infobox': infobox_title,
             'attributes': result_chunks,
-            'urls': [{'title': 'Wolfram|Alpha', 'url': resp.request.headers['Referer']}],
-        }
-    )
-
-    # append link to site
-    results.append({'url': resp.request.headers['Referer'], 'title': title, 'content': result_content})
-
-    return results
+            'urls': [
+                {
+                    'title': 'Wolfram|Alpha',
+                    'url': resp.request.headers['Referer'],
+                }
+            ],
+        },
+        {
+            'url': resp.request.headers['Referer'],
+            'title': title,
+            'content': result_content,
+        },
+    ]

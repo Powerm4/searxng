@@ -96,7 +96,9 @@ class LanguageParser(QueryPartParser):
                 found = True
                 lang_parts = lang_id.split('-')
                 if len(lang_parts) == 2:
-                    self.raw_text_query.languages.append(lang_parts[0] + '-' + lang_parts[1].upper())
+                    self.raw_text_query.languages.append(
+                        f'{lang_parts[0]}-{lang_parts[1].upper()}'
+                    )
                 else:
                     self.raw_text_query.languages.append(lang_id)
                 # to ensure best match (first match is not necessarily the best one)
@@ -107,7 +109,7 @@ class LanguageParser(QueryPartParser):
         if VALID_LANGUAGE_CODE.match(value) or value == 'auto':
             lang_parts = value.split('-')
             if len(lang_parts) > 1:
-                value = lang_parts[0].lower() + '-' + lang_parts[1].upper()
+                value = f'{lang_parts[0].lower()}-{lang_parts[1].upper()}'
             if value not in self.raw_text_query.languages:
                 self.raw_text_query.languages.append(value)
                 found = True
@@ -119,7 +121,7 @@ class LanguageParser(QueryPartParser):
             # show some example queries
             if len(settings['search']['languages']) < 10:
                 for lang in settings['search']['languages']:
-                    self.raw_text_query.autocomplete_list.append(':' + lang)
+                    self.raw_text_query.autocomplete_list.append(f':{lang}')
             else:
                 for lang in [":en", ":en_us", ":english", ":united_kingdom"]:
                     self.raw_text_query.autocomplete_list.append(lang)
@@ -135,11 +137,11 @@ class LanguageParser(QueryPartParser):
                 if len(value) <= 2:
                     self._add_autocomplete(':' + lang_id.split('-')[0])
                 else:
-                    self._add_autocomplete(':' + lang_id)
+                    self._add_autocomplete(f':{lang_id}')
 
             # check if query starts with language name
             if lang_name.startswith(value) or english_name.startswith(value):
-                self._add_autocomplete(':' + lang_name)
+                self._add_autocomplete(f':{lang_name}')
 
             # check if query starts with country
             # here "new_zealand" is "new-zealand" (see __call__)
@@ -171,7 +173,7 @@ class ExternalBangParser(QueryPartParser):
         if not bang_ac_list:
             bang_ac_list = ['g', 'ddg', 'bing']
         for external_bang in bang_ac_list:
-            self._add_autocomplete('!!' + external_bang)
+            self._add_autocomplete(f'!!{external_bang}')
 
 
 class BangParser(QueryPartParser):
@@ -293,13 +295,14 @@ class RawTextQuery:
             if query_part.isspace() or query_part == '':
                 continue
 
-            # parse special commands
-            special_part = False
-            for parser_class in RawTextQuery.PARSER_CLASSES:
-                if parser_class.check(query_part):
-                    special_part = parser_class(self, i == autocomplete_index)(query_part)
-                    break
-
+            special_part = next(
+                (
+                    parser_class(self, i == autocomplete_index)(query_part)
+                    for parser_class in RawTextQuery.PARSER_CLASSES
+                    if parser_class.check(query_part)
+                ),
+                False,
+            )
             # append query part to query_part list
             qlist = self.query_parts if special_part else self.user_query_parts
             qlist.append(query_part)

@@ -114,13 +114,11 @@ def request(query, params):
 
     path = "/search"
     if params['pageno'] > 1:
-        # don't use nextpage when user selected to jump back to page 1
-        nextpage = params['engine_data'].get('nextpage')
-        if nextpage:
+        if nextpage := params['engine_data'].get('nextpage'):
             path = "/nextpage/search"
             args['nextpage'] = nextpage
 
-    params["url"] = _backend_url() + f"{path}?" + urlencode(args)
+    params["url"] = f"{_backend_url()}{path}?{urlencode(args)}"
     return params
 
 
@@ -134,26 +132,26 @@ def response(resp):
         uploaded = result.get("uploaded", -1)
 
         item = {
-            # the api url differs from the frontend, hence use piped.video as default
             "url": _frontend_url() + result.get("url", ""),
             "title": result.get("title", ""),
-            "publishedDate": parser.parse(time.ctime(uploaded / 1000)) if uploaded != -1 else None,
-            "iframe_src": _frontend_url() + '/embed' + result.get("url", ""),
+            "publishedDate": parser.parse(time.ctime(uploaded / 1000))
+            if uploaded != -1
+            else None,
+            "iframe_src": f'{_frontend_url()}/embed' + result.get("url", ""),
         }
-        length = result.get("duration")
-        if length:
+        if length := result.get("duration"):
             item["length"] = datetime.timedelta(seconds=length)
 
-        if piped_filter == 'videos':
+        if piped_filter == 'music_songs':
+            item["template"] = "default.html"
+            item["img_src"] = result.get("thumbnail", "")
+            item["content"] = result.get("uploaderName", "") or ""
+
+        elif piped_filter == 'videos':
             item["template"] = "videos.html"
             # if the value of shortDescription set, but is None, return empty string
             item["content"] = result.get("shortDescription", "") or ""
             item["thumbnail"] = result.get("thumbnail", "")
-
-        elif piped_filter == 'music_songs':
-            item["template"] = "default.html"
-            item["img_src"] = result.get("thumbnail", "")
-            item["content"] = result.get("uploaderName", "") or ""
 
         results.append(item)
 

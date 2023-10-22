@@ -98,16 +98,16 @@ def request(query, params):
     if ceid_suffix and ceid_suffix not in ['Hans', 'Hant']:
 
         if ceid_region.lower() == ceid_lang:
-            google_info['params']['hl'] = ceid_lang + '-' + ceid_region
+            google_info['params']['hl'] = f'{ceid_lang}-{ceid_region}'
         else:
-            google_info['params']['hl'] = ceid_lang + '-' + ceid_suffix
+            google_info['params']['hl'] = f'{ceid_lang}-{ceid_suffix}'
 
     elif ceid_region.lower() != ceid_lang:
 
         if ceid_region in ['AT', 'BE', 'CH', 'IL', 'SA', 'IN', 'BD', 'PT']:
             google_info['params']['hl'] = ceid_lang
         else:
-            google_info['params']['hl'] = ceid_lang + '-' + ceid_region
+            google_info['params']['hl'] = f'{ceid_lang}-{ceid_region}'
 
     google_info['params']['lr'] = 'lang_' + ceid_lang.split('-')[0]
     google_info['params']['gl'] = ceid_region
@@ -122,8 +122,7 @@ def request(query, params):
                 **google_info['params'],
             }
         )
-        # ceid includes a ':' character which must not be urlencoded
-        + ('&ceid=%s' % ceid)
+        + f'&ceid={ceid}'
     )
 
     params['url'] = query_url
@@ -149,7 +148,7 @@ def response(resp):
         href = eval_xpath_getindex(result, './article/a/@href', 0)
         href = href.split('?')[0]
         href = href.split('/')[-1]
-        href = base64.urlsafe_b64decode(href + '====')
+        href = base64.urlsafe_b64decode(f'{href}====')
         href = href[href.index(b'http') :].split(b'\xd2')[0]
         href = href.decode()
 
@@ -295,11 +294,11 @@ def fetch_traits(engine_traits: EngineTraits):
             if x[1] not in ['Hant', 'Hans']:
                 lang = x[0]
 
-        sxng_locale = _ceid_locale_map.get(ceid, lang + '-' + region)
+        sxng_locale = _ceid_locale_map.get(ceid, f'{lang}-{region}')
         try:
             locale = babel.Locale.parse(sxng_locale, sep='-')
         except babel.UnknownLocaleError:
-            print("ERROR: %s -> %s is unknown by babel" % (ceid, sxng_locale))
+            print(f"ERROR: {ceid} -> {sxng_locale} is unknown by babel")
             continue
 
         engine_traits.custom['ceid'][locales.region_tag(locale)] = ceid

@@ -13,12 +13,10 @@ preference_section = 'general'
 
 
 def extract_doi(url):
-    match = regex.search(url.path)
-    if match:
+    if match := regex.search(url.path):
         return match.group(0)
     for _, v in parse_qsl(url.query):
-        match = regex.search(v)
-        if match:
+        if match := regex.search(v):
             return match.group(0)
     return None
 

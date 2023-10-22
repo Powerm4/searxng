@@ -64,8 +64,7 @@ def request(query, params):
     }
 
     if 'language' in station_filters:
-        lang = traits.get_language(params['searxng_locale'])  # type: ignore
-        if lang:
+        if lang := traits.get_language(params['searxng_locale']):
             args['language'] = lang
 
     if 'countrycode' in station_filters:
@@ -89,12 +88,10 @@ def response(resp):
             url = result['url_resolved']
 
         content = []
-        tags = ', '.join(result.get('tags', '').split(','))
-        if tags:
+        if tags := ', '.join(result.get('tags', '').split(',')):
             content.append(tags)
         for x in ['state', 'country']:
-            v = result.get(x)
-            if v:
+            if v := result.get(x):
                 v = str(v).strip()
                 content.append(v)
 
@@ -107,8 +104,7 @@ def response(resp):
             (gettext('votes'), 'votes'),
             (gettext('clicks'), 'clickcount'),
         ]:
-            v = result.get(y)
-            if v:
+            if v := result.get(y):
                 v = str(v).strip()
                 metadata.append(f"{x} {v}")
         results.append(
@@ -157,10 +153,9 @@ def fetch_traits(engine_traits: EngineTraits):
             continue
 
         eng_tag = lang['name']
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.languages[sxng_tag] = eng_tag
 
@@ -171,6 +166,5 @@ def fetch_traits(engine_traits: EngineTraits):
             continue
         countrycodes.add(region['iso_3166_1'])
 
-    countrycodes = list(countrycodes)
-    countrycodes.sort()
+    countrycodes = sorted(countrycodes)
     engine_traits.custom['countrycodes'] = countrycodes

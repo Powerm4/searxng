@@ -30,9 +30,7 @@ class EngineTraitsEncoder(json.JSONEncoder):
 
     def default(self, o):
         """Return dictionary of a :class:`EngineTraits` object."""
-        if isinstance(o, EngineTraits):
-            return o.__dict__
-        return super().default(o)
+        return o.__dict__ if isinstance(o, EngineTraits) else super().default(o)
 
 
 @dataclasses.dataclass
@@ -129,7 +127,7 @@ class EngineTraits:
         if self.data_type == 'traits_v1':
             return bool(self.get_region(searxng_locale) or self.get_language(searxng_locale))
 
-        raise TypeError('engine traits of type %s is unknown' % self.data_type)
+        raise TypeError(f'engine traits of type {self.data_type} is unknown')
 
     def copy(self):
         """Create a copy of the dataclass object."""
@@ -142,10 +140,9 @@ class EngineTraits:
         function does not exists, ``None`` is returned.
         """
 
-        fetch_traits = getattr(engine, 'fetch_traits', None)
         engine_traits = None
 
-        if fetch_traits:
+        if fetch_traits := getattr(engine, 'fetch_traits', None):
             engine_traits = cls()
             fetch_traits(engine_traits)
         return engine_traits
@@ -159,7 +156,7 @@ class EngineTraits:
         if self.data_type == 'traits_v1':
             self._set_traits_v1(engine)
         else:
-            raise TypeError('engine traits of type %s is unknown' % self.data_type)
+            raise TypeError(f'engine traits of type {self.data_type} is unknown')
 
     def _set_traits_v1(self, engine: Engine):
         # For an engine, when there is `language: ...` in the YAML settings the engine
@@ -215,8 +212,7 @@ class EngineTraitsMap(Dict[str, EngineTraits]):
     def fetch_traits(cls, log: Callable) -> Self:
         from searx import engines  # pylint: disable=cyclic-import, import-outside-toplevel
 
-        names = list(engines.engines)
-        names.sort()
+        names = sorted(engines.engines)
         obj = cls()
 
         for engine_name in names:

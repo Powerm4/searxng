@@ -65,9 +65,7 @@ def post_search(request, search):
             }
             return True
 
-        x_forwarded_for = request.headers.getlist("X-Forwarded-For")
-
-        if x_forwarded_for:
+        if x_forwarded_for := request.headers.getlist("X-Forwarded-For"):
             ip_address = x_forwarded_for[0]
         else:
             ip_address = request.remote_addr

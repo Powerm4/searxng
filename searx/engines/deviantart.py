@@ -76,8 +76,7 @@ def response(resp):
             }
         )
 
-    nextpage_url = extract_text(eval_xpath(dom, cursor_xpath))
-    if nextpage_url:
+    if nextpage_url := extract_text(eval_xpath(dom, cursor_xpath)):
         results.append(
             {
                 'engine_data': nextpage_url.replace("http://", "https://"),

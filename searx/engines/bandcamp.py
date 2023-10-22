@@ -76,19 +76,19 @@ def response(resp):
             "content": extract_text(content),
         }
 
-        date = eval_xpath_getindex(result, '//div[@class="released"]/text()', 0, default=None)
-        if date:
+        if date := eval_xpath_getindex(
+            result, '//div[@class="released"]/text()', 0, default=None
+        ):
             new_result["publishedDate"] = dateparse(date.replace("released ", ""))
 
-        thumbnail = result.xpath('.//div[@class="art"]/img/@src')
-        if thumbnail:
+        if thumbnail := result.xpath('.//div[@class="art"]/img/@src'):
             new_result['img_src'] = thumbnail[0]
 
         result_id = parse_qs(urlparse(link.get('href')).query)["search_item_id"][0]
         itemtype = extract_text(result.xpath('.//div[@class="itemtype"]')).lower()
-        if "album" == itemtype:
+        if itemtype == "album":
             new_result["iframe_src"] = iframe_src.format(type='album', result_id=result_id)
-        elif "track" == itemtype:
+        elif itemtype == "track":
             new_result["iframe_src"] = iframe_src.format(type='track', result_id=result_id)
 
         results.append(new_result)

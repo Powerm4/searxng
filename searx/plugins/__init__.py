@@ -191,8 +191,7 @@ class PluginStore:
         self.plugins: List[Plugin] = []
 
     def __iter__(self):
-        for plugin in self.plugins:
-            yield plugin
+        yield from self.plugins
 
     def register(self, plugin):
         self.plugins.append(plugin)
@@ -218,7 +217,7 @@ def plugin_module_names():
 
     # embedded plugins
     for module in iter_modules(path=[dirname(__file__)]):
-        yield (__name__ + "." + module.name, False)
+        yield (f"{__name__}.{module.name}", False)
         yield_plugins.add(module.name)
     # external plugins
     for module_name in settings['plugins']:
@@ -229,6 +228,7 @@ def plugin_module_names():
 
 def initialize(app):
     for module_name, external in plugin_module_names():
-        plugin = load_and_initialize_plugin(module_name, external, (app, settings))
-        if plugin:
+        if plugin := load_and_initialize_plugin(
+            module_name, external, (app, settings)
+        ):
             plugins.register(plugin)

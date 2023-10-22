@@ -109,7 +109,7 @@ class MultipleChoiceSetting(Setting):
 
     def parse(self, data: str):
         """Parse and validate ``data`` and store the result at ``self.value``"""
-        if data == '':
+        if not data:
             self.value = []
             return
 
@@ -144,7 +144,7 @@ class SetSetting(Setting):
 
     def parse(self, data: str):
         """Parse and validate ``data`` and store the result at ``self.value``"""
-        if data == '':
+        if not data:
             self.values = set()
             return
 
@@ -175,7 +175,7 @@ class SearchLanguageSetting(EnumStringSetting):
         """Parse and validate ``data`` and store the result at ``self.value``"""
         if data not in self.choices and data != self.value:
             # hack to give some backwards compatibility with old language cookies
-            data = str(data).replace('_', '-')
+            data = data.replace('_', '-')
             lang = data.split('-', maxsplit=1)[0]
 
             if data in self.choices:
@@ -219,7 +219,7 @@ class BooleanSetting(Setting):
         for v_str, v_obj in MAP_STR2BOOL.items():
             if val == v_obj:
                 return v_str
-        raise ValueError("Invalid value: %s (%s) is not a boolean!" % (repr(val), type(val)))
+        raise ValueError(f"Invalid value: {repr(val)} ({type(val)}) is not a boolean!")
 
     def parse(self, data: str):
         """Parse and validate ``data`` and store the result at ``self.value``"""
@@ -293,9 +293,11 @@ class EnginesSetting(BooleanChoices):
         choices = {}
         for engine in engines:
             for category in engine.categories:
-                if not category in list(settings['categories_as_tabs'].keys()) + [DEFAULT_CATEGORY]:
+                if category not in list(settings['categories_as_tabs'].keys()) + [
+                    DEFAULT_CATEGORY
+                ]:
                     continue
-                choices['{}__{}'.format(engine.name, category)] = not engine.disabled
+                choices[f'{engine.name}__{category}'] = not engine.disabled
         super().__init__(default_value, choices)
 
     def transform_form_items(self, items):
@@ -338,7 +340,7 @@ class ClientPref:
             return None
         tag = self.locale.language
         if self.locale.territory:
-            tag += '-' + self.locale.territory
+            tag += f'-{self.locale.territory}'
         return tag
 
     @classmethod
@@ -480,15 +482,13 @@ class Preferences:
 
     def get_as_url_params(self):
         """Return preferences as URL parameters"""
-        settings_kv = {}
-        for k, v in self.key_value_settings.items():
-            if v.locked:
-                continue
-            if isinstance(v, MultipleChoiceSetting):
-                settings_kv[k] = ','.join(v.get_value())
-            else:
-                settings_kv[k] = v.get_value()
-
+        settings_kv = {
+            k: ','.join(v.get_value())
+            if isinstance(v, MultipleChoiceSetting)
+            else v.get_value()
+            for k, v in self.key_value_settings.items()
+            if not v.locked
+        }
         settings_kv['disabled_engines'] = ','.join(self.engines.disabled)
         settings_kv['enabled_engines'] = ','.join(self.engines.enabled)
 
@@ -502,9 +502,12 @@ class Preferences:
     def parse_encoded_data(self, input_data: str):
         """parse (base64) preferences from request (``flask.request.form['preferences']``)"""
         bin_data = decompress(urlsafe_b64decode(input_data))
-        dict_data = {}
-        for x, y in parse_qs(bin_data.decode('ascii'), keep_blank_values=True).items():
-            dict_data[x] = y[0]
+        dict_data = {
+            x: y[0]
+            for x, y in parse_qs(
+                bin_data.decode('ascii'), keep_blank_values=True
+            ).items()
+        }
         self.parse_dict(dict_data)
 
     def parse_dict(self, input_data: Dict[str, str]):
@@ -579,15 +582,11 @@ class Preferences:
         return resp
 
     def validate_token(self, engine):
-        valid = True
-        if hasattr(engine, 'tokens') and engine.tokens:
-            valid = False
-            for token in self.tokens.values:
-                if token in engine.tokens:
-                    valid = True
-                    break
-
-        return valid
+        return (
+            any(token in engine.tokens for token in self.tokens.values)
+            if hasattr(engine, 'tokens') and engine.tokens
+            else True
+        )
 
 
 def is_locked(setting_name: str):

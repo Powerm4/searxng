@@ -41,8 +41,7 @@ def brave(query, _lang):
 
     if resp.ok:
         data = resp.json()
-        for item in data[1]:
-            results.append(item)
+        results.extend(iter(data[1]))
     return results
 
 
@@ -70,7 +69,7 @@ def duckduckgo(query, sxng_locale):
         'kl': traits.get_region(sxng_locale, traits.all_locale),
     }
 
-    url = 'https://duckduckgo.com/ac/?type=list&' + urlencode(args)
+    url = f'https://duckduckgo.com/ac/?type=list&{urlencode(args)}'
     resp = get(url)
 
     ret_val = []
@@ -105,8 +104,9 @@ def google_complete(query, sxng_locale):
     if resp.ok:
         json_txt = resp.text[resp.text.find('[') : resp.text.find(']', -3) + 1]
         data = json.loads(json_txt)
-        for item in data[0]:
-            results.append(lxml.html.fromstring(item[0]).text_content())
+        results.extend(
+            lxml.html.fromstring(item[0]).text_content() for item in data[0]
+        )
     return results
 
 
@@ -158,8 +158,7 @@ def swisscows(query, _lang):
     # swisscows autocompleter
     url = 'https://swisscows.ch/api/suggest?{query}&itemsCount=5'
 
-    resp = json.loads(get(url.format(query=urlencode({'query': query}))).text)
-    return resp
+    return json.loads(get(url.format(query=urlencode({'query': query}))).text)
 
 
 def qwant(query, sxng_locale):
@@ -173,9 +172,7 @@ def qwant(query, sxng_locale):
     if resp.ok:
         data = resp.json()
         if data['status'] == 'success':
-            for item in data['data']['items']:
-                results.append(item['value'])
-
+            results.extend(item['value'] for item in data['data']['items'])
     return results
 
 
@@ -211,9 +208,7 @@ def yandex(query, _lang):
     url = "https://suggest.yandex.com/suggest-ff.cgi?{0}"
 
     resp = json.loads(get(url.format(urlencode(dict(part=query)))).text)
-    if len(resp) > 1:
-        return resp[1]
-    return []
+    return resp[1] if len(resp) > 1 else []
 
 
 backends = {

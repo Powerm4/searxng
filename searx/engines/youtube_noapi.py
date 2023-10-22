@@ -122,13 +122,12 @@ def parse_first_page_response(response_text):
 
     for section in sections:
         if "continuationItemRenderer" in section:
-            next_page_token = (
+            if next_page_token := (
                 section["continuationItemRenderer"]
                 .get("continuationEndpoint", {})
                 .get("continuationCommand", {})
                 .get("token", "")
-            )
-            if next_page_token:
+            ):
                 results.append(
                     {
                         "engine_data": next_page_token,
@@ -140,7 +139,7 @@ def parse_first_page_response(response_text):
             videoid = video.get('videoId')
             if videoid is not None:
                 url = base_youtube_url + videoid
-                thumbnail = 'https://i.ytimg.com/vi/' + videoid + '/hqdefault.jpg'
+                thumbnail = f'https://i.ytimg.com/vi/{videoid}/hqdefault.jpg'
                 title = get_text_from_json(video.get('title', {}))
                 content = get_text_from_json(video.get('descriptionSnippet', {}))
                 author = get_text_from_json(video.get('ownerText', {}))
@@ -155,7 +154,7 @@ def parse_first_page_response(response_text):
                         'author': author,
                         'length': length,
                         'template': 'videos.html',
-                        'iframe_src': 'https://www.youtube-nocookie.com/embed/' + videoid,
+                        'iframe_src': f'https://www.youtube-nocookie.com/embed/{videoid}',
                         'thumbnail': thumbnail,
                     }
                 )

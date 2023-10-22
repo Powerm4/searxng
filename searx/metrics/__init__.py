@@ -43,7 +43,7 @@ def histogram_observe_time(*args):
     if h:
         h.observe(duration)
     else:
-        raise ValueError("histogram " + repr((*args,)) + " doesn't not exist")
+        raise ValueError(f"histogram {repr((*args, ))} doesn't not exist")
 
 
 def histogram_observe(duration, *args):
@@ -53,7 +53,7 @@ def histogram_observe(duration, *args):
 def histogram(*args, raise_on_not_found=True):
     h = histogram_storage.get(*args)
     if raise_on_not_found and h is None:
-        raise ValueError("histogram " + repr((*args,)) + " doesn't not exist")
+        raise ValueError(f"histogram {repr((*args, ))} doesn't not exist")
     return h
 
 
@@ -112,8 +112,7 @@ def initialize(engine_names=None, enabled=True):
 
 def get_engine_errors(engline_name_list):
     result = {}
-    engine_names = list(errors_per_engines.keys())
-    engine_names.sort()
+    engine_names = sorted(errors_per_engines.keys())
     for engine_name in engine_names:
         if engine_name not in engline_name_list:
             continue
@@ -161,7 +160,11 @@ def get_reliabilities(engline_name_list, checker_results):
             reliability = 0
         else:
             # pylint: disable=consider-using-generator
-            reliability = 100 - sum([error['percentage'] for error in errors if not error.get('secondary')])
+            reliability = 100 - sum(
+                error['percentage']
+                for error in errors
+                if not error.get('secondary')
+            )
 
         reliabilities[engine_name] = {
             'reliability': reliability,

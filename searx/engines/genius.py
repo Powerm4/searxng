@@ -40,23 +40,20 @@ def request(query, params):
 
 def parse_lyric(hit):
     content = ''
-    highlights = hit['highlights']
-    if highlights:
+    if highlights := hit['highlights']:
         content = hit['highlights'][0]['value']
     else:
         content = hit['result'].get('title_with_featured', '')
 
-    timestamp = hit['result']['lyrics_updated_at']
     result = {
         'url': hit['result']['url'],
         'title': hit['result']['full_title'],
         'content': content,
         'img_src': hit['result']['song_art_image_thumbnail_url'],
     }
-    if timestamp:
-        result.update({'publishedDate': datetime.fromtimestamp(timestamp)})
-    api_path = hit['result'].get('api_path')
-    if api_path:
+    if timestamp := hit['result']['lyrics_updated_at']:
+        result['publishedDate'] = datetime.fromtimestamp(timestamp)
+    if api_path := hit['result'].get('api_path'):
         # The players are just playing 30sec from the title.  Some of the player
         # will be blocked because of a cross-origin request and some players will
         # link to apple when you press the play button.
@@ -65,13 +62,12 @@ def parse_lyric(hit):
 
 
 def parse_artist(hit):
-    result = {
+    return {
         'url': hit['result']['url'],
         'title': hit['result']['name'],
         'content': '',
         'img_src': hit['result']['image_url'],
     }
-    return result
 
 
 def parse_album(hit):
@@ -80,8 +76,8 @@ def parse_album(hit):
     x = res.get('release_date_components')
     if x:
         x = x.get('year')
-        if x:
-            content = "%s / %s" % (x, content)
+    if x:
+        content = f"{x} / {content}"
     return {
         'url': res['url'],
         'title': res['full_title'],
@@ -97,7 +93,6 @@ def response(resp):
     results = []
     for section in resp.json()['response']['sections']:
         for hit in section['hits']:
-            func = parse.get(hit['type'])
-            if func:
+            if func := parse.get(hit['type']):
                 results.append(func(hit))
     return results

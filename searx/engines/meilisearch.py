@@ -52,7 +52,7 @@ def init(_):
         raise ValueError('index cannot be empty')
 
     global _search_url
-    _search_url = base_url + '/indexes/' + index + '/search'
+    _search_url = f'{base_url}/indexes/{index}/search'
 
 
 def request(query, params):

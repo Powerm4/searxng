@@ -89,7 +89,7 @@ class EngineProcessor(ABC):
         if isinstance(exception_or_message, BaseException):
             exception_class = exception_or_message.__class__
             module_name = getattr(exception_class, '__module__', 'builtins')
-            module_name = '' if module_name == 'builtins' else module_name + '.'
+            module_name = '' if module_name == 'builtins' else f'{module_name}.'
             error_message = module_name + exception_class.__qualname__
         else:
             error_message = exception_or_message
@@ -154,12 +154,13 @@ class EngineProcessor(ABC):
         if search_query.time_range and not self.engine.time_range_support:
             return None
 
-        params = {}
-        params['category'] = engine_category
-        params['pageno'] = search_query.pageno
-        params['safesearch'] = search_query.safesearch
-        params['time_range'] = search_query.time_range
-        params['engine_data'] = search_query.engine_data.get(self.engine_name, {})
+        params = {
+            'category': engine_category,
+            'pageno': search_query.pageno,
+            'safesearch': search_query.safesearch,
+            'time_range': search_query.time_range,
+            'engine_data': search_query.engine_data.get(self.engine_name, {}),
+        }
         params['searxng_locale'] = search_query.lang
 
         # deprecated / vintage --> use params['searxng_locale']

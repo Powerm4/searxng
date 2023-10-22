@@ -110,7 +110,14 @@ def response_apps(resp):
 
         results.append({"url": url, "title": title, "content": content, "img_src": img})
 
-    for suggestion in eval_xpath_list(dom, '//c-wiz[@jsrenderer="qyd4Kb"]//div[@class="ULeU3b neq64b"]'):
-        results.append({"suggestion": extract_text(eval_xpath(suggestion, './/div[@class="Epkrse "]'))})
-
+    results.extend(
+        {
+            "suggestion": extract_text(
+                eval_xpath(suggestion, './/div[@class="Epkrse "]')
+            )
+        }
+        for suggestion in eval_xpath_list(
+            dom, '//c-wiz[@jsrenderer="qyd4Kb"]//div[@class="ULeU3b neq64b"]'
+        )
+    )
     return results

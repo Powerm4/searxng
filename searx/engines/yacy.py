@@ -106,7 +106,7 @@ def init(_):
         # 'app', 'audio', 'video',
     ]
     if search_type not in valid_types:
-        raise ValueError('search_type "%s" is  not one of %s' % (search_type, valid_types))
+        raise ValueError(f'search_type "{search_type}" is  not one of {valid_types}')
 
 
 def request(query, params):

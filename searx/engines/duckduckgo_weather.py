@@ -105,8 +105,6 @@ def c_to_f(temperature):
 
 
 def response(resp):
-    results = []
-
     if resp.text.strip() == "ddg_spice_forecast();":
         return []
 
@@ -149,11 +147,4 @@ def response(resp):
 
     infobox += "</tbody></table>"
 
-    results.append(
-        {
-            "infobox": title,
-            "content": infobox,
-        }
-    )
-
-    return results
+    return [{"infobox": title, "content": infobox}]

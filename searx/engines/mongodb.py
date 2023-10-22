@@ -84,7 +84,6 @@ def connect():
 
 
 def search(query, params):
-    results = []
     if exact_match_only:
         q = {'$eq': query}
     else:
@@ -93,7 +92,7 @@ def search(query, params):
 
     query = _client.find({key: q}).skip((params['pageno'] - 1) * results_per_page).limit(results_per_page)
 
-    results.append({'number_of_results': query.count()})
+    results = [{'number_of_results': query.count()}]
     for r in query:
         del r['_id']
         r = {str(k): str(v) for k, v in r.items()}

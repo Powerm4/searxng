@@ -60,7 +60,7 @@ class TestLanguageParser(SearxTestCase):
     def test_language_code(self):
         language = 'es-ES'
         query_text = 'the query'
-        full_query = ':' + language + ' ' + query_text
+        full_query = f':{language} {query_text}'
         query = RawTextQuery(full_query, [])
 
         self.assertEqual(query.getFullQuery(), full_query)
@@ -72,7 +72,7 @@ class TestLanguageParser(SearxTestCase):
     def test_language_name(self):
         language = 'english'
         query_text = 'the query'
-        full_query = ':' + language + ' ' + query_text
+        full_query = f':{language} {query_text}'
         query = RawTextQuery(full_query, [])
 
         self.assertEqual(query.getFullQuery(), full_query)
@@ -83,7 +83,7 @@ class TestLanguageParser(SearxTestCase):
     def test_unlisted_language_code(self):
         language = 'all'
         query_text = 'the query'
-        full_query = ':' + language + ' ' + query_text
+        full_query = f':{language} {query_text}'
         query = RawTextQuery(full_query, [])
 
         self.assertEqual(query.getFullQuery(), full_query)
@@ -94,7 +94,7 @@ class TestLanguageParser(SearxTestCase):
     def test_auto_language_code(self):
         language = 'auto'
         query_text = 'una consulta'
-        full_query = ':' + language + ' ' + query_text
+        full_query = f':{language} {query_text}'
         query = RawTextQuery(full_query, [])
 
         self.assertEqual(query.getFullQuery(), full_query)
@@ -105,7 +105,7 @@ class TestLanguageParser(SearxTestCase):
     def test_invalid_language_code(self):
         language = 'not_a_language'
         query_text = 'the query'
-        full_query = ':' + language + ' ' + query_text
+        full_query = f':{language} {query_text}'
         query = RawTextQuery(full_query, [])
 
         self.assertEqual(query.getFullQuery(), full_query)
@@ -223,7 +223,7 @@ class TestExternalBangParser(SearxTestCase):
         self.assertGreater(len(query.autocomplete_list), 0)
 
         a = query.autocomplete_list[0]
-        self.assertEqual(query.get_autocomplete_full_query(a), a + ' the query')
+        self.assertEqual(query.get_autocomplete_full_query(a), f'{a} the query')
 
 
 class TestBang(SearxTestCase):
@@ -236,17 +236,17 @@ class TestBang(SearxTestCase):
 
         for bang in TestBang.SPECIFIC_BANGS:
             with self.subTest(msg="Check bang", bang=bang):
-                query_text = TestBang.THE_QUERY + ' ' + bang
+                query_text = f'{TestBang.THE_QUERY} {bang}'
                 query = RawTextQuery(query_text, [])
 
-                self.assertEqual(query.getFullQuery(), bang + ' ' + TestBang.THE_QUERY)
+                self.assertEqual(query.getFullQuery(), f'{bang} {TestBang.THE_QUERY}')
                 self.assertEqual(query.query_parts, [bang])
                 self.assertEqual(query.user_query_parts, TestBang.THE_QUERY.split(' '))
 
     def test_specific(self):
         for bang in TestBang.SPECIFIC_BANGS:
             with self.subTest(msg="Check bang is specific", bang=bang):
-                query_text = TestBang.THE_QUERY + ' ' + bang
+                query_text = f'{TestBang.THE_QUERY} {bang}'
                 query = RawTextQuery(query_text, [])
                 self.assertTrue(query.specific)
 

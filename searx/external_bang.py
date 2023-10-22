@@ -25,9 +25,7 @@ def get_bang_definition_and_ac(external_bangs_db, bang):
     bang_definition = None
     bang_ac_list = []
     if after != '':
-        for k in node:
-            if k.startswith(after):
-                bang_ac_list.append(before + k)
+        bang_ac_list.extend(before + k for k in node if k.startswith(after))
     elif isinstance(node, dict):
         bang_definition = node.get(LEAF_KEY)
         bang_ac_list = [before + k for k in node.keys() if k != LEAF_KEY]
@@ -41,13 +39,13 @@ def get_bang_definition_and_ac(external_bangs_db, bang):
 def resolve_bang_definition(bang_definition, query):
     url, rank = bang_definition.split(chr(1))
     if url.startswith('//'):
-        url = 'https:' + url
+        url = f'https:{url}'
     if query:
         url = url.replace(chr(2), quote_plus(query))
     else:
         # go to main instead of search page
         o = urlparse(url)
-        url = o.scheme + '://' + o.netloc
+        url = f'{o.scheme}://{o.netloc}'
 
     rank = int(rank) if len(rank) > 0 else 0
     return (url, rank)
@@ -62,7 +60,7 @@ def get_bang_definition_and_autocomplete(bang, external_bangs_db=None):
     new_autocomplete = []
     current = [*bang_ac_list]
     done = set()
-    while len(current) > 0:
+    while current:
         bang_ac = current.pop(0)
         done.add(bang_ac)
 

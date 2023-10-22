@@ -59,8 +59,7 @@ Kong."""
 def localeselector():
     locale = 'en'
     if has_request_context():
-        value = flask.request.preferences.get_value('locale')
-        if value:
+        if value := flask.request.preferences.get_value('locale'):
             locale = value
 
     # first, set the language that is not supported by babel
@@ -106,12 +105,10 @@ def get_locale_descr(locale, locale_name):
     if not native_territory and not english_territory:
         if native_language == english_language:
             return native_language
-        return native_language + ' (' + english_language + ')'
+        return f'{native_language} ({english_language})'
 
-    result = native_language + ', ' + native_territory + ' (' + english_language
-    if english_territory:
-        return result + ', ' + english_territory + ')'
-    return result + ')'
+    result = f'{native_language}, {native_territory} ({english_language}'
+    return f'{result}, {english_territory})' if english_territory else f'{result})'
 
 
 def _get_locale_descr(locale, language_code):
@@ -164,7 +161,7 @@ def region_tag(locale: babel.Locale) -> str:
     """Returns SearXNG's region tag from the locale (e.g. zh-TW , en-US)."""
     if not locale.territory:
         raise ValueError('%s missed a territory')
-    return locale.language + '-' + locale.territory
+    return f'{locale.language}-{locale.territory}'
 
 
 def language_tag(locale: babel.Locale) -> str:
@@ -173,7 +170,7 @@ def language_tag(locale: babel.Locale) -> str:
     """
     sxng_lang = locale.language
     if locale.script:
-        sxng_lang += '_' + locale.script
+        sxng_lang += f'_{locale.script}'
     return sxng_lang
 
 
@@ -181,9 +178,7 @@ def get_locale(locale_tag: str) -> Optional[babel.Locale]:
     """Returns a :py:obj:`babel.Locale` object parsed from argument
     ``locale_tag``"""
     try:
-        locale = babel.Locale.parse(locale_tag, sep='-')
-        return locale
-
+        return babel.Locale.parse(locale_tag, sep='-')
     except babel.core.UnknownLocaleError:
         return None
 
@@ -213,11 +208,11 @@ def get_official_locales(
 
     if languages:
         languages = [l.lower() for l in languages]
-        o_languages = set(l for l in o_languages if l.lower() in languages)
+        o_languages = {l for l in o_languages if l.lower() in languages}
 
     for lang in o_languages:
         try:
-            locale = babel.Locale.parse(lang + '_' + territory)
+            locale = babel.Locale.parse(f'{lang}_{territory}')
             ret_val.add(locale)
         except babel.UnknownLocaleError:
             continue
@@ -308,7 +303,7 @@ def get_engine_locale(searxng_locale, engine_locales, default=None):
         # Try to narrow by *official* languages in the territory (??-XX).
 
         for official_language in babel.languages.get_official_languages(locale.territory, de_facto=True):
-            searxng_locale = official_language + '-' + locale.territory
+            searxng_locale = f'{official_language}-{locale.territory}'
             engine_locale = engine_locales.get(searxng_locale)
             if engine_locale is not None:
                 return engine_locale
@@ -336,33 +331,14 @@ def get_engine_locale(searxng_locale, engine_locales, default=None):
             territory = 'US'
 
         if terr_lang_dict.get(territory):
-            searxng_locale = locale.language + '-' + territory
+            searxng_locale = f'{locale.language}-{territory}'
             engine_locale = engine_locales.get(searxng_locale)
             if engine_locale is not None:
                 return engine_locale
 
-        # second: sort by population_percent and take first match
-
-        # drawback of "population percent": if there is a territory with a
-        #   small number of people (e.g 100) but the majority speaks the
-        #   language, then the percentage might be 100% (--> 100 people) but in
-        #   a different territory with more people (e.g. 10.000) where only 10%
-        #   speak the language the total amount of speaker is higher (--> 200
-        #   people).
-        #
-        #   By example: The population of Saint-Martin is 33.000, of which 100%
-        #   speak French, but this is less than the 30% of the approximately 2.5
-        #   million Belgian citizens
-        #
-        #   - 'fr-MF', 'population_percent': 100.0, 'official_status': 'official'
-        #   - 'fr-BE', 'population_percent': 38.0, 'official_status': 'official'
-
-        terr_lang_list = []
-        for k, v in terr_lang_dict.items():
-            terr_lang_list.append((k, v))
-
+        terr_lang_list = list(terr_lang_dict.items())
         for territory, _lang in sorted(terr_lang_list, key=lambda item: item[1]['population_percent'], reverse=True):
-            searxng_locale = locale.language + '-' + territory
+            searxng_locale = f'{locale.language}-{territory}'
             engine_locale = engine_locales.get(searxng_locale)
             if engine_locale is not None:
                 return engine_locale
@@ -412,14 +388,11 @@ def match_locale(searxng_locale: str, locale_tag_list: List[str], fallback: Opti
     if locale.territory:
         searxng_locale = region_tag(locale)
 
-    # clean up locale_tag_list
-
-    tag_list = []
-    for tag in locale_tag_list:
-        if tag in ('all', 'auto') or tag in ADDITIONAL_TRANSLATIONS:
-            continue
-        tag_list.append(tag)
-
+    tag_list = [
+        tag
+        for tag in locale_tag_list
+        if tag not in ('all', 'auto') and tag not in ADDITIONAL_TRANSLATIONS
+    ]
     # emulate fetch_traits
     engine_locales = build_engine_locales(tag_list)
     return get_engine_locale(searxng_locale, engine_locales, default=fallback)

@@ -66,12 +66,11 @@ def response(resp):
         results.append({'url': cleaned_url, 'title': title, 'content': content, 'is_onion': True})
 
     # get spelling corrections
-    for correction in eval_xpath_list(dom, correction_xpath):
-        results.append({'correction': extract_text(correction)})
-
-    # get number of results
-    number_of_results = eval_xpath(dom, number_of_results_xpath)
-    if number_of_results:
+    results.extend(
+        {'correction': extract_text(correction)}
+        for correction in eval_xpath_list(dom, correction_xpath)
+    )
+    if number_of_results := eval_xpath(dom, number_of_results_xpath):
         try:
             results.append({'number_of_results': int(extract_text(number_of_results))})
         except:

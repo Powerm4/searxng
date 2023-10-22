@@ -49,9 +49,7 @@ lang_urls = {
 
 # get base & search URLs for selected language
 def get_lang_urls(language):
-    if language != 'en':
-        return lang_urls['others']
-    return lang_urls['en']
+    return lang_urls['others'] if language != 'en' else lang_urls['en']
 
 
 # Language names to build search requests for
@@ -87,7 +85,7 @@ def request(query, params):
     # if our language is hosted on the main site, we need to add its name
     # to the query in order to narrow the results to that language
     if language in main_langs:
-        query += ' (' + main_langs[language] + ')'
+        query += f' ({main_langs[language]})'
 
     # prepare the request parameters
     query = urlencode({'search': query})

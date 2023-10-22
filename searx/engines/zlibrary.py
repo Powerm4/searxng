@@ -116,9 +116,12 @@ def response(resp: httpx.Response) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     dom = html.fromstring(resp.text)
 
-    for item in dom.xpath('//div[@id="searchResultBox"]//div[contains(@class, "resItemBox")]'):
-        results.append(_parse_result(item))
-
+    results.extend(
+        _parse_result(item)
+        for item in dom.xpath(
+            '//div[@id="searchResultBox"]//div[contains(@class, "resItemBox")]'
+        )
+    )
     return results
 
 
@@ -145,13 +148,17 @@ def _parse_result(item) -> Dict[str, Any]:
         "img_src": _text(item, './/img[contains(@class, "cover")]/@data-src'),
     }
 
-    year = _text(item, './/div[contains(@class, "property_year")]//div[contains(@class, "property_value")]')
-    if year:
+    if year := _text(
+        item,
+        './/div[contains(@class, "property_year")]//div[contains(@class, "property_value")]',
+    ):
         result["publishedDate"] = datetime.strptime(year, '%Y')
 
     content = []
-    language = _text(item, './/div[contains(@class, "property_language")]//div[contains(@class, "property_value")]')
-    if language:
+    if language := _text(
+        item,
+        './/div[contains(@class, "property_language")]//div[contains(@class, "property_value")]',
+    ):
         content.append(f"{i18n_language}: {language.capitalize()}")
     book_rating = _text(item, './/span[contains(@class, "book-rating-interest-score")]')
     if book_rating and float(book_rating):
@@ -213,9 +220,8 @@ def fetch_traits(engine_traits: EngineTraits) -> None:
             # print("ERROR: %s is unknown by babel" % (eng_lang))
             continue
         sxng_lang = language_tag(locale)
-        conflict = engine_traits.languages.get(sxng_lang)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_lang):
             if conflict != eng_lang:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_lang, conflict, eng_lang))
+                print(f"CONFLICT: babel {sxng_lang} --> {conflict}, {eng_lang}")
             continue
         engine_traits.languages[sxng_lang] = eng_lang

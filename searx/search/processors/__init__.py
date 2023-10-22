@@ -38,23 +38,26 @@ PROCESSORS: Dict[str, EngineProcessor] = {}
 
 def get_processor_class(engine_type):
     """Return processor class according to the ``engine_type``"""
-    for c in [
-        OnlineProcessor,
-        OfflineProcessor,
-        OnlineDictionaryProcessor,
-        OnlineCurrencyProcessor,
-        OnlineUrlSearchProcessor,
-    ]:
-        if c.engine_type == engine_type:
-            return c
-    return None
+    return next(
+        (
+            c
+            for c in [
+                OnlineProcessor,
+                OfflineProcessor,
+                OnlineDictionaryProcessor,
+                OnlineCurrencyProcessor,
+                OnlineUrlSearchProcessor,
+            ]
+            if c.engine_type == engine_type
+        ),
+        None,
+    )
 
 
 def get_processor(engine, engine_name):
     """Return processor instance that fits to ``engine.engine.type``)"""
     engine_type = getattr(engine, 'engine_type', 'online')
-    processor_class = get_processor_class(engine_type)
-    if processor_class:
+    if processor_class := get_processor_class(engine_type):
         return processor_class(engine, engine_name)
     return None
 
@@ -73,8 +76,7 @@ def initialize(engine_list):
     """Initialize all engines and store a processor for each engine in :py:obj:`PROCESSORS`."""
     for engine_data in engine_list:
         engine_name = engine_data['name']
-        engine = engines.engines.get(engine_name)
-        if engine:
+        if engine := engines.engines.get(engine_name):
             processor = get_processor(engine, engine_name)
             initialize_processor(processor)
             if processor is None:

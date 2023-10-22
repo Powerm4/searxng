@@ -70,7 +70,7 @@ def response(resp):
         module = fields["documentation"]
         results.append(
             {
-                "url": "https://metacpan.org/pod/" + module,
+                "url": f"https://metacpan.org/pod/{module}",
                 "title": module,
                 "content": fields.get("abstract", ""),
             }

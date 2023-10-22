@@ -51,7 +51,7 @@ def init(_):
         raise ValueError('collection cannot be empty')
 
     global _search_url
-    _search_url = base_url + '/solr/' + collection + '/select?{params}'
+    _search_url = f'{base_url}/solr/{collection}' + '/select?{params}'
 
 
 def request(query, params):
@@ -79,7 +79,7 @@ def response(resp):
     results = []
     for result in resp_json['response']['docs']:
         r = {key: str(value) for key, value in result.items()}
-        if len(r) == 0:
+        if not r:
             continue
         r['template'] = 'key-value.html'
         results.append(r)

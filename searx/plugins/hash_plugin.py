@@ -49,7 +49,7 @@ def post_search(request, search):
 
     # make digest from the given string
     f.update(string.encode('utf-8').strip())
-    answer = function + " " + gettext('hash digest') + ": " + f.hexdigest()
+    answer = f"{function} " + gettext('hash digest') + ": " + f.hexdigest()
 
     # print result
     search.result_container.answers.clear()

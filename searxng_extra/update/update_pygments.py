@@ -66,6 +66,6 @@ def generat_css(light_style, dark_style) -> str:
 
 
 if __name__ == '__main__':
-    print("update: %s" % LESS_FILE)
+    print(f"update: {LESS_FILE}")
     with open(LESS_FILE, 'w') as f:
         f.write(generat_css('default', 'lightbulb'))

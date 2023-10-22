@@ -158,8 +158,7 @@ def _get_results_from_process(results, cmd, pageno):
     count = 0
     start, end = __get_results_limits(pageno)
     with Popen(cmd, stdout=PIPE, stderr=PIPE, env=environment_variables) as process:
-        line = process.stdout.readline()
-        while line:
+        while line := process.stdout.readline():
             buf = leftover + line.decode('utf-8')
             raw_results = buf.split(result_separator)
             if raw_results[-1]:
@@ -172,15 +171,13 @@ def _get_results_from_process(results, cmd, pageno):
                     _command_logger.debug('skipped result:', raw_result)
                     continue
 
-                if start <= count and count <= end:
+                if start <= count <= end:
                     result['template'] = result_template
                     results.append(result)
 
                 count += 1
                 if end < count:
                     return results
-
-            line = process.stdout.readline()
 
         return_code = process.wait(timeout=timeout)
         if return_code != 0:
@@ -235,9 +232,9 @@ def __parse_single_result(raw_result):
 
     if parse_regex:
         for result_key, regex in _compiled_parse_regex.items():
-            found = regex.search(raw_result)
-            if not found:
-                return {}
-            result[result_key] = raw_result[found.start() : found.end()]
+            if found := regex.search(raw_result):
+                result[result_key] = raw_result[found.start() : found.end()]
 
+            else:
+                return {}
     return result

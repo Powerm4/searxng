@@ -4,6 +4,7 @@
 
 """
 
+
 import typing
 import numbers
 import errno
@@ -18,7 +19,7 @@ searx_dir = abspath(dirname(__file__))
 
 logger = logging.getLogger('searx')
 OUTPUT_FORMATS = ['html', 'csv', 'json', 'rss']
-SXNG_LOCALE_TAGS = ['all', 'auto'] + list(l[0] for l in sxng_locales)
+SXNG_LOCALE_TAGS = ['all', 'auto'] + [l[0] for l in sxng_locales]
 SIMPLE_STYLE = ('auto', 'light', 'dark')
 CATEGORIES_AS_TABS = {
     'general': {},
@@ -68,7 +69,9 @@ class SettingsValue:
             return
         type_list = tuple(t for t in self.type_definition if isinstance(t, type))
         if not isinstance(value, type_list):
-            raise ValueError('The value has to be one of these types/values: {}'.format(self.type_definition_repr))
+            raise ValueError(
+                f'The value has to be one of these types/values: {self.type_definition_repr}'
+            )
 
     def __call__(self, value: typing.Any) -> typing.Any:
         if value == _UNDEFINED:
@@ -90,8 +93,8 @@ class SettingSublistValue(SettingsValue):
         if not isinstance(value, list):
             raise ValueError('The value has to a list')
         for item in value:
-            if not item in self.type_definition[0]:
-                raise ValueError('{} not in {}'.format(item, self.type_definition))
+            if item not in self.type_definition[0]:
+                raise ValueError(f'{item} not in {self.type_definition}')
 
 
 class SettingsDirectoryValue(SettingsValue):

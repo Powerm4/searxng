@@ -83,20 +83,19 @@ def request(query, params):
         'apiKey': api_key,
     }
 
-    api_url = base_url + '/engine'
-    if seekr_category == 'news':
-        api_url += '/v2/newssearch'
-
-    elif seekr_category == 'images':
+    api_url = f'{base_url}/engine'
+    if seekr_category == 'images':
         api_url += '/imagetab'
+
+    elif seekr_category == 'news':
+        api_url += '/v2/newssearch'
 
     elif seekr_category == 'videos':
         api_url += '/videotab'
 
     params['url'] = f"{api_url}?{urlencode(args)}"
     if params['pageno'] > 1:
-        nextpage = params['engine_data'].get('nextpage')
-        if nextpage:
+        if nextpage := params['engine_data'].get('nextpage'):
             params['url'] = nextpage
 
     return params
@@ -182,19 +181,24 @@ def _news_response(json):
     if not search_results:
         return results
 
-    for result in search_results['results']:
-
-        results.append(
-            {
-                'url': result['url'],
-                'title': result['title'],
-                'content': result['summary'] or result["topCategory"] or result["displayUrl"] or '',
-                'thumbnail': result.get('thumbnail', ''),
-                'publishedDate': datetime.strptime(result['pubDate'][:19], '%Y-%m-%d %H:%M:%S'),
-                'metadata': gettext("Language") + ': ' + result.get('language', ''),
-            }
-        )
-
+    results.extend(
+        {
+            'url': result['url'],
+            'title': result['title'],
+            'content': result['summary']
+            or result["topCategory"]
+            or result["displayUrl"]
+            or '',
+            'thumbnail': result.get('thumbnail', ''),
+            'publishedDate': datetime.strptime(
+                result['pubDate'][:19], '%Y-%m-%d %H:%M:%S'
+            ),
+            'metadata': gettext("Language")
+            + ': '
+            + result.get('language', ''),
+        }
+        for result in search_results['results']
+    )
     if search_results.get('nextResultSet'):
         results.append(
             {

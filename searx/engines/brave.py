@@ -208,12 +208,14 @@ def response(resp):
     if brave_category == 'search':
         return _parse_search(resp)
 
-    datastr = ""
-    for line in resp.text.split("\n"):
-        if "const data = " in line:
-            datastr = line.replace("const data = ", "").strip()[:-1]
-            break
-
+    datastr = next(
+        (
+            line.replace("const data = ", "").strip()[:-1]
+            for line in resp.text.split("\n")
+            if "const data = " in line
+        ),
+        "",
+    )
     json_data = js_variable_to_python(datastr)
     json_resp = json_data[1]['data']['body']['response']
 
@@ -233,8 +235,9 @@ def _parse_search(resp):
     result_list = []
     dom = html.fromstring(resp.text)
 
-    answer_tag = eval_xpath_getindex(dom, '//div[@class="answer"]', 0, default=None)
-    if answer_tag:
+    if answer_tag := eval_xpath_getindex(
+        dom, '//div[@class="answer"]', 0, default=None
+    ):
         url = eval_xpath_getindex(dom, '//div[@id="featured_snippet"]/a[@class="result-header"]/@href', 0, default=None)
         result_list.append({'answer': extract_text(answer_tag), 'url': url})
 
@@ -263,11 +266,7 @@ def _parse_search(resp):
         )
         if video_tag is not None:
 
-            # In my tests a video tag in the WEB search was most often not a
-            # video, except the ones from youtube ..
-
-            iframe_src = _get_iframe_src(url)
-            if iframe_src:
+            if iframe_src := _get_iframe_src(url):
                 item['iframe_src'] = iframe_src
                 item['template'] = 'videos.html'
                 item['thumbnail'] = eval_xpath_getindex(video_tag, './/img/@src', 0, default='')
@@ -282,9 +281,8 @@ def _parse_search(resp):
 def _get_iframe_src(url):
     parsed_url = urlparse(url)
     if parsed_url.path == '/watch' and parsed_url.query:
-        video_id = parse_qs(parsed_url.query).get('v', [])  # type: ignore
-        if video_id:
-            return 'https://www.youtube-nocookie.com/embed/' + video_id[0]  # type: ignore
+        if video_id := parse_qs(parsed_url.query).get('v', []):
+            return f'https://www.youtube-nocookie.com/embed/{video_id[0]}'
     return None
 
 
@@ -340,8 +338,7 @@ def _parse_videos(json_resp):
         if result['thumbnail'] is not None:
             item['thumbnail'] = result['thumbnail']['src']
 
-        iframe_src = _get_iframe_src(url)
-        if iframe_src:
+        if iframe_src := _get_iframe_src(url):
             item['iframe_src'] = iframe_src
 
         result_list.append(item)
@@ -384,13 +381,14 @@ def fetch_traits(engine_traits: EngineTraits):
                 sxng_tag = language_tag(babel.Locale.parse(ui_lang))
 
         except babel.UnknownLocaleError:
-            print("ERROR: can't determine babel locale of Brave's (UI) language %s" % ui_lang)
+            print(
+                f"ERROR: can't determine babel locale of Brave's (UI) language {ui_lang}"
+            )
             continue
 
-        conflict = engine_traits.custom["ui_lang"].get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.custom["ui_lang"].get(sxng_tag):
             if conflict != ui_lang:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, ui_lang))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {ui_lang}")
             continue
         engine_traits.custom["ui_lang"][sxng_tag] = ui_lang
 
@@ -414,12 +412,9 @@ def fetch_traits(engine_traits: EngineTraits):
         # add official languages of the country ..
         for lang_tag in babel.languages.get_official_languages(country_tag, de_facto=True):
             lang_tag = lang_map.get(lang_tag, lang_tag)
-            sxng_tag = region_tag(babel.Locale.parse('%s_%s' % (lang_tag, country_tag.upper())))
-            # print("%-20s: %s <-- %s" % (v['label'], country_tag, sxng_tag))
-
-            conflict = engine_traits.regions.get(sxng_tag)
-            if conflict:
+            sxng_tag = region_tag(babel.Locale.parse(f'{lang_tag}_{country_tag.upper()}'))
+            if conflict := engine_traits.regions.get(sxng_tag):
                 if conflict != country_tag:
-                    print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, country_tag))
+                    print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {country_tag}")
                     continue
             engine_traits.regions[sxng_tag] = country_tag

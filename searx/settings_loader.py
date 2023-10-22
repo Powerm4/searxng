@@ -15,9 +15,7 @@ searx_dir = abspath(dirname(__file__))
 
 
 def existing_filename_or_none(file_name: str) -> Optional[str]:
-    if isfile(file_name):
-        return file_name
-    return None
+    return file_name if isfile(file_name) else None
 
 
 def load_yaml(file_name):
@@ -74,8 +72,7 @@ def update_settings(default_settings, user_settings):
             else:
                 default_settings[k] = v
 
-    categories_as_tabs = user_settings.get('categories_as_tabs')
-    if categories_as_tabs:
+    if categories_as_tabs := user_settings.get('categories_as_tabs'):
         default_settings['categories_as_tabs'] = categories_as_tabs
 
     # parse the engines
@@ -97,13 +94,10 @@ def update_settings(default_settings, user_settings):
         if keep_only_engines is not None:
             engines = list(filter(lambda engine: (engine.get('name')) in keep_only_engines, engines))
 
-        # parse "engines"
-        user_engines = user_settings.get('engines')
-        if user_engines:
-            engines_dict = dict((definition['name'], definition) for definition in engines)
+        if user_engines := user_settings.get('engines'):
+            engines_dict = {definition['name']: definition for definition in engines}
             for user_engine in user_engines:
-                default_engine = engines_dict.get(user_engine['name'])
-                if default_engine:
+                if default_engine := engines_dict.get(user_engine['name']):
                     update_dict(default_engine, user_engine)
                 else:
                     engines.append(user_engine)
@@ -130,7 +124,10 @@ def load_settings(load_user_settings=True):
     user_settings_path = get_user_settings_path()
     if user_settings_path is None or not load_user_settings:
         # no user settings
-        return (load_yaml(default_settings_path), 'load the default settings from {}'.format(default_settings_path))
+        return (
+            load_yaml(default_settings_path),
+            f'load the default settings from {default_settings_path}',
+        )
 
     # user settings
     user_settings = load_yaml(user_settings_path)
@@ -140,10 +137,8 @@ def load_settings(load_user_settings=True):
         update_settings(default_settings, user_settings)
         return (
             default_settings,
-            'merge the default settings ( {} ) and the user settings ( {} )'.format(
-                default_settings_path, user_settings_path
-            ),
+            f'merge the default settings ( {default_settings_path} ) and the user settings ( {user_settings_path} )',
         )
 
     # the user settings, fully replace the default configuration
-    return (user_settings, 'load the user settings from {}'.format(user_settings_path))
+    return user_settings, f'load the user settings from {user_settings_path}'

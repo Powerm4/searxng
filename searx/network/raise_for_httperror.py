@@ -20,9 +20,7 @@ def is_cloudflare_challenge(resp):
             and 'window._cf_chl_enter(' in resp.text
         ):
             return True
-    if resp.status_code == 403 and '__cf_chl_captcha_tk__=' in resp.text:
-        return True
-    return False
+    return resp.status_code == 403 and '__cf_chl_captcha_tk__=' in resp.text
 
 
 def is_cloudflare_firewall(resp):
@@ -72,7 +70,9 @@ def raise_for_httperror(resp):
     if resp.status_code and resp.status_code >= 400:
         raise_for_captcha(resp)
         if resp.status_code in (402, 403):
-            raise SearxEngineAccessDeniedException(message='HTTP error ' + str(resp.status_code))
+            raise SearxEngineAccessDeniedException(
+                message=f'HTTP error {str(resp.status_code)}'
+            )
         if resp.status_code == 429:
             raise SearxEngineTooManyRequestsException()
         resp.raise_for_status()

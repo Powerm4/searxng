@@ -30,17 +30,15 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
     dom = html.fromstring(resp.text)
-    for result in eval_xpath_list(dom, results_xpath):
-        results.append(
-            {
-                'template': 'images.html',
-                'url': base_url + extract_text(eval_xpath(result, url_xpath)),
-                'title': extract_text(eval_xpath(result, title_xpath)).replace(" SVG File", "").replace("Show ", ""),
-                'img_src': extract_text(eval_xpath(result, img_src_xpath)),
-            }
-        )
-
-    return results
+    return [
+        {
+            'template': 'images.html',
+            'url': base_url + extract_text(eval_xpath(result, url_xpath)),
+            'title': extract_text(eval_xpath(result, title_xpath))
+            .replace(" SVG File", "")
+            .replace("Show ", ""),
+            'img_src': extract_text(eval_xpath(result, img_src_xpath)),
+        }
+        for result in eval_xpath_list(dom, results_xpath)
+    ]

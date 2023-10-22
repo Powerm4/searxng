@@ -108,15 +108,13 @@ def get_request_exception_messages(
     url = None
     status_code = None
     reason = None
-    hostname = None
     if hasattr(exc, '_request') and exc._request is not None:
         # exc.request is property that raise an RuntimeException
         # if exc._request is not defined.
         url = exc.request.url
     if url is None and hasattr(exc, 'response') and exc.response is not None:
         url = exc.response.url
-    if url is not None:
-        hostname = url.host
+    hostname = url.host if url is not None else None
     if isinstance(exc, HTTPStatusError):
         status_code = str(exc.response.status_code)
         reason = exc.response.reason_phrase
@@ -149,7 +147,7 @@ def get_exception_classname(exc: Exception) -> str:
     exc_module = exc_class.__module__
     if exc_module is None or exc_module == str.__class__.__module__:
         return exc_name
-    return exc_module + '.' + exc_name
+    return f'{exc_module}.{exc_name}'
 
 
 def get_error_context(framerecords, exception_classname, log_message, log_parameters, secondary) -> ErrorContext:

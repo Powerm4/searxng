@@ -41,11 +41,11 @@ def extract(
        https://babel.pocoo.org/en/latest/messages.html#writing-extraction-methods
     """
     if fileobj.name not in _MSG_FILES:
-        raise RuntimeError("don't know how to extract messages from %s" % fileobj.name)
+        raise RuntimeError(f"don't know how to extract messages from {fileobj.name}")
 
     namespace = {}
     exec(fileobj.read(), {}, namespace)  # pylint: disable=exec-used
 
     for name in namespace['__all__']:
         for k, v in namespace[name].items():
-            yield 0, '_', v, ["%s['%s']" % (name, k)]
+            yield (0, '_', v, [f"{name}['{k}']"])

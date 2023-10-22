@@ -134,10 +134,7 @@ def build_result(item: etree.Element) -> Dict[str, Any]:
     # extract attributes from XML
     # see https://torznab.github.io/spec-1.3-draft/torznab/Specification-v1.3.html#predefined-attributes
     enclosure: etree.Element | None = item.find('enclosure')
-    enclosure_url: str | None = None
-    if enclosure is not None:
-        enclosure_url = enclosure.get('url')
-
+    enclosure_url = enclosure.get('url') if enclosure is not None else None
     size = get_attribute(item, 'size')
     if not size and enclosure:
         size = enclosure.get('length')
@@ -177,17 +174,13 @@ def build_result(item: etree.Element) -> Dict[str, Any]:
 def _map_result_url(guid: str | None, comments: str | None) -> str | None:
     if guid and guid.startswith('http'):
         return guid
-    if comments and comments.startswith('http'):
-        return comments
-    return None
+    return comments if comments and comments.startswith('http') else None
 
 
 def _map_leechers(leechers: str | None, seeders: str | None, peers: str | None) -> str | None:
     if leechers:
         return leechers
-    if seeders and peers:
-        return str(int(peers) - int(seeders))
-    return None
+    return str(int(peers) - int(seeders)) if seeders and peers else None
 
 
 def _map_published_date(pubDate: str | None) -> datetime | None:
@@ -219,17 +212,13 @@ def _map_magnet_link(
         return guid
     if enclosure_url and enclosure_url.startswith('magnet'):
         return enclosure_url
-    if link and link.startswith('magnet'):
-        return link
-    return None
+    return link if link and link.startswith('magnet') else None
 
 
 def get_attribute(item: etree.Element, property_name: str) -> str | None:
     """Get attribute from item."""
     property_element: etree.Element | None = item.find(property_name)
-    if property_element is not None:
-        return property_element.text
-    return None
+    return property_element.text if property_element is not None else None
 
 
 def get_torznab_attribute(item: etree.Element, attribute_name: str) -> str | None:
@@ -238,6 +227,4 @@ def get_torznab_attribute(item: etree.Element, attribute_name: str) -> str | Non
         './/torznab:attr[@name="{attribute_name}"]'.format(attribute_name=attribute_name),
         {'torznab': 'http://torznab.com/schemas/2015/feed'},
     )
-    if element is not None:
-        return element.get("value")
-    return None
+    return element.get("value") if element is not None else None

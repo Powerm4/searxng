@@ -34,30 +34,27 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
     json_resp = resp.json()
 
-    results.append(
+    results = [
         {
             'engine_data': json_resp['resource_response']['bookmark'],
-            # it's called bookmark by pinterest, but it's rather a nextpage
-            # parameter to get the next results
             'key': 'bookmark',
         }
+    ]
+    results.extend(
+        {
+            'template': 'images.html',
+            'url': result['link'] or f"{base_url}/pin/{result['id']}/",
+            'title': result.get('title') or result.get('grid_title'),
+            'content': (result.get('rich_summary') or {}).get(
+                'display_description'
+            )
+            or "",
+            'img_src': result['images']['orig']['url'],
+            'thumbnail_src': result['images']['236x']['url'],
+            'source': (result.get('rich_summary') or {}).get('site_name'),
+        }
+        for result in json_resp['resource_response']['data']['results']
     )
-
-    for result in json_resp['resource_response']['data']['results']:
-        results.append(
-            {
-                'template': 'images.html',
-                'url': result['link'] or f"{base_url}/pin/{result['id']}/",
-                'title': result.get('title') or result.get('grid_title'),
-                'content': (result.get('rich_summary') or {}).get('display_description') or "",
-                'img_src': result['images']['orig']['url'],
-                'thumbnail_src': result['images']['236x']['url'],
-                'source': (result.get('rich_summary') or {}).get('site_name'),
-            }
-        )
-
     return results

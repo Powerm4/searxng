@@ -23,21 +23,18 @@ def answer(query):
     func = parts[0]
     answer = None
 
-    if func == 'min':
-        answer = min(args)
+    if func == 'avg':
+        answer = sum(args) / len(args)
     elif func == 'max':
         answer = max(args)
-    elif func == 'avg':
-        answer = sum(args) / len(args)
-    elif func == 'sum':
-        answer = sum(args)
+    elif func == 'min':
+        answer = min(args)
     elif func == 'prod':
         answer = reduce(mul, args, 1)
 
-    if answer is None:
-        return []
-
-    return [{'answer': str(answer)}]
+    elif func == 'sum':
+        answer = sum(args)
+    return [] if answer is None else [{'answer': str(answer)}]
 
 
 # required answerer function

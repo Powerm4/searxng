@@ -41,7 +41,6 @@ def request(_query, params):
 
 
 def response(resp):
-    results = []
     result = loads(resp.text)
     translations = result['translations']
 
@@ -52,11 +51,4 @@ def response(resp):
 
     infobox += "</dl>"
 
-    results.append(
-        {
-            'infobox': 'Deepl',
-            'content': infobox,
-        }
-    )
-
-    return results
+    return [{'infobox': 'Deepl', 'content': infobox}]

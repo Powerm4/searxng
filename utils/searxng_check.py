@@ -3,6 +3,7 @@
 """Implement some checks in the active installation
 """
 
+
 import os
 import sys
 import logging
@@ -19,15 +20,15 @@ import searx
 OLD_SETTING = '/etc/searx/settings.yml'
 
 if os.path.isfile(OLD_SETTING):
-    msg = (
-        '%s is no longer valid, move setting to %s' % (
-            OLD_SETTING,
-            os.environ.get('SEARXNG_SETTINGS_PATH', '/etc/searxng/settings.yml')
-        ))
+    msg = f"{OLD_SETTING} is no longer valid, move setting to {os.environ.get('SEARXNG_SETTINGS_PATH', '/etc/searxng/settings.yml')}"
     warnings.warn(msg, DeprecationWarning)
 
 from searx import redisdb, get_setting
 
 if not redisdb.initialize():
-    warnings.warn("can't connect to redis DB at: %s" % get_setting('redis.url'), RuntimeWarning, stacklevel=2)
+    warnings.warn(
+        f"can't connect to redis DB at: {get_setting('redis.url')}",
+        RuntimeWarning,
+        stacklevel=2,
+    )
     warnings.warn("--> no bot protection without redis DB", RuntimeWarning, stacklevel=2)

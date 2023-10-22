@@ -4,6 +4,7 @@
 """Utility functions for the engines
 
 """
+
 import re
 import importlib
 import importlib.util
@@ -57,15 +58,15 @@ _LANG_TO_LC_CACHE: Dict[str, Dict[str, str]] = {}
 _FASTTEXT_MODEL: Optional["fasttext.FastText._FastText"] = None
 """fasttext model to predict laguage of a search term"""
 
-SEARCH_LANGUAGE_CODES = frozenset([searxng_locale[0].split('-')[0] for searxng_locale in sxng_locales])
+SEARCH_LANGUAGE_CODES = frozenset(
+    searxng_locale[0].split('-')[0] for searxng_locale in sxng_locales
+)
 """Languages supported by most searxng engines (:py:obj:`searx.sxng_locales.sxng_locales`)."""
 
 
 class _NotSetClass:  # pylint: disable=too-few-public-methods
     """Internal class for this module, do not create instance of this class.
     Replace the None value, allow explicitly pass None as a function argument"""
-
-
 _NOTSET = _NotSetClass()
 
 
@@ -121,10 +122,7 @@ class _HTMLTextExtractor(HTMLParser):  # pylint: disable=W0223  # (see https://b
     def handle_charref(self, name):
         if not self.is_valid_tag():
             return
-        if name[0] in ('x', 'X'):
-            codepoint = int(name[1:], 16)
-        else:
-            codepoint = int(name)
+        codepoint = int(name[1:], 16) if name[0] in ('x', 'X') else int(name)
         self.result.append(chr(codepoint))
 
     def handle_entityref(self, name):
@@ -208,9 +206,9 @@ def extract_text(xpath_results, allow_none: bool = False) -> Optional[str]:
         return ' '.join(text.split())
     if isinstance(xpath_results, (_ElementStringResult, _ElementUnicodeResult, str, Number, bool)):
         return str(xpath_results)
-    if xpath_results is None and allow_none:
-        return None
-    if xpath_results is None and not allow_none:
+    if xpath_results is None:
+        if allow_none:
+            return None
         raise ValueError('extract_text(None, allow_none=False)')
     raise ValueError('unsupported type')
 
@@ -300,8 +298,7 @@ def extract_url(xpath_results, base_url) -> str:
     if xpath_results == []:
         raise ValueError('Empty url resultset')
 
-    url = extract_text(xpath_results)
-    if url:
+    if url := extract_text(xpath_results):
         return normalize_url(url, base_url)
     raise ValueError('URL not found')
 
@@ -343,9 +340,7 @@ def get_torrent_size(filesize: str, filesize_multiplier: str) -> Optional[int]:
 
 def convert_str_to_int(number_str: str) -> int:
     """Convert number_str to int or 0 if number_str is not a number."""
-    if number_str.isdigit():
-        return int(number_str)
-    return 0
+    return int(number_str) if number_str.isdigit() else 0
 
 
 def int_or_zero(num: Union[List[str], str]) -> int:
@@ -382,14 +377,22 @@ def is_valid_lang(lang) -> Optional[Tuple[bool, str, str]]:
     is_abbr = len(lang) == 2
     lang = lang.lower()
     if is_abbr:
-        for l in sxng_locales:
-            if l[0][:2] == lang:
-                return (True, l[0][:2], l[3].lower())
-        return None
-    for l in sxng_locales:
-        if l[1].lower() == lang or l[3].lower() == lang:
-            return (True, l[0][:2], l[3].lower())
-    return None
+        return next(
+            (
+                (True, l[0][:2], l[3].lower())
+                for l in sxng_locales
+                if l[0][:2] == lang
+            ),
+            None,
+        )
+    return next(
+        (
+            (True, l[0][:2], l[3].lower())
+            for l in sxng_locales
+            if l[1].lower() == lang or l[3].lower() == lang
+        ),
+        None,
+    )
 
 
 def load_module(filename: str, module_dir: str) -> types.ModuleType:
@@ -410,9 +413,7 @@ def to_string(obj: Any) -> str:
     """Convert obj to its string representation."""
     if isinstance(obj, str):
         return obj
-    if hasattr(obj, '__str__'):
-        return str(obj)
-    return repr(obj)
+    return str(obj) if hasattr(obj, '__str__') else repr(obj)
 
 
 def ecma_unescape(string: str) -> str:
@@ -537,7 +538,7 @@ def eval_xpath_list(element: ElementBase, xpath_spec: XPathSpecType, min_len: Op
     if not isinstance(result, list):
         raise SearxEngineXPathException(xpath_spec, 'the result is not a list')
     if min_len is not None and min_len > len(result):
-        raise SearxEngineXPathException(xpath_spec, 'len(xpath_str) < ' + str(min_len))
+        raise SearxEngineXPathException(xpath_spec, f'len(xpath_str) < {str(min_len)}')
     return result
 
 
@@ -566,7 +567,7 @@ def eval_xpath_getindex(elements: ElementBase, xpath_spec: XPathSpecType, index:
     if default == _NOTSET:
         # raise an SearxEngineXPathException instead of IndexError
         # to record xpath_spec
-        raise SearxEngineXPathException(xpath_spec, 'index ' + str(index) + ' not found')
+        raise SearxEngineXPathException(xpath_spec, f'index {index} not found')
     return default
 
 

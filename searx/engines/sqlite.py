@@ -69,7 +69,7 @@ def sqlite_cursor():
     * https://www.sqlite.org/uri.html
 
     """
-    uri = 'file:' + database + '?mode=ro'
+    uri = f'file:{database}?mode=ro'
     with contextlib.closing(sqlite3.connect(uri, uri=True)) as connect:
         connect.row_factory = sqlite3.Row
         with contextlib.closing(connect.cursor()) as cursor:
@@ -85,7 +85,7 @@ def search(query, params):
         'limit': limit,
         'offset': (params['pageno'] - 1) * limit,
     }
-    query_to_run = query_str + ' LIMIT :limit OFFSET :offset'
+    query_to_run = f'{query_str} LIMIT :limit OFFSET :offset'
 
     with sqlite_cursor() as cur:
 

@@ -135,8 +135,7 @@ def request(query, params):
         # Insufficient rights for the `ams_country' parameter of route `GET /videos'
         # 'ams_country': eng_region.split('_')[1],
 
-    time_delta = time_delta_dict.get(params["time_range"])
-    if time_delta:
+    if time_delta := time_delta_dict.get(params["time_range"]):
         created_after = datetime.now() - time_delta
         args['created_after'] = datetime.timestamp(created_after)
 
@@ -166,7 +165,7 @@ def response(resp):
 
         content = html_to_text(res['description'])
         if len(content) > 300:
-            content = content[:300] + '...'
+            content = f'{content[:300]}...'
 
         publishedDate = datetime.fromtimestamp(res['created_time'], None)
 
@@ -229,13 +228,12 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = region_tag(babel.Locale.parse(eng_tag))
         except babel.UnknownLocaleError:
-            print("ERROR: item unknown --> %s" % item)
+            print(f"ERROR: item unknown --> {item}")
             continue
 
-        conflict = engine_traits.regions.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.regions.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.regions[sxng_tag] = eng_tag
 
