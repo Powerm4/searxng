@@ -83,7 +83,7 @@ def request(query, params):
     if params['time_range']:
         query_params['qft'] = time_map.get(params['time_range'], 'interval="9"')
 
-    params['url'] = base_url + '?' + urlencode(query_params)
+    params['url'] = f'{base_url}?{urlencode(query_params)}'
 
     return params
 

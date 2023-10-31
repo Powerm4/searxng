@@ -41,7 +41,9 @@ def fetch_firefox_versions():
     resp = requests.get(URL, timeout=2.0)
     if resp.status_code != 200:
         # pylint: disable=broad-exception-raised
-        raise Exception("Error fetching firefox versions, HTTP code " + resp.status_code)
+        raise Exception(
+            f"Error fetching firefox versions, HTTP code {resp.status_code}"
+        )
     dom = html.fromstring(resp.text)
     versions = []
 
@@ -63,16 +65,16 @@ def fetch_firefox_last_versions():
     result = []
     major_last = versions[0].major
     major_list = (major_last, major_last - 1)
+    msg = (
+        "Please check if the rv segment of the user agent is still frozen at 109.0: "
+        "https://bugzilla.mozilla.org/show_bug.cgi?id=1805967"
+    )
     for version in versions:
-        msg = (
-            "Please check if the rv segment of the user agent is still frozen at 109.0: "
-            "https://bugzilla.mozilla.org/show_bug.cgi?id=1805967"
-        )
         assert version.major != 120, msg
 
         major_current = version.major
-        minor_current = version.minor
         if major_current in major_list:
+            minor_current = version.minor
             user_agent_version = f'{major_current}.{minor_current}'
             if user_agent_version not in result:
                 result.append(user_agent_version)

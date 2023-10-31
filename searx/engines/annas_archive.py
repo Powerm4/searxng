@@ -102,7 +102,9 @@ def init(engine_settings=None):  # pylint: disable=unused-argument
 def request(query, params: Dict[str, Any]) -> Dict[str, Any]:
     q = quote(query)
     lang = traits.get_language(params["language"], traits.all_locale)  # type: ignore
-    params["url"] = base_url + f"/search?lang={lang or ''}&content={aa_content}&ext={aa_ext}&sort={aa_sort}&q={q}"
+    params[
+        "url"
+    ] = f"{base_url}/search?lang={lang or ''}&content={aa_content}&ext={aa_ext}&sort={aa_sort}&q={q}"
     return params
 
 
@@ -110,9 +112,12 @@ def response(resp) -> List[Dict[str, Optional[str]]]:
     results: List[Dict[str, Optional[str]]] = []
     dom = html.fromstring(resp.text)
 
-    for item in eval_xpath_list(dom, '//main//div[contains(@class, "h-[125]")]/a'):
-        results.append(_get_result(item))
-
+    results.extend(
+        _get_result(item)
+        for item in eval_xpath_list(
+            dom, '//main//div[contains(@class, "h-[125]")]/a'
+        )
+    )
     # The rendering of the WEB page is very strange; except the first position
     # all other positions of Anna's result page are enclosed in SGML comments.
     # These comments are *uncommented* by some JS code, see query of class
@@ -151,7 +156,7 @@ def fetch_traits(engine_traits: EngineTraits):
     engine_traits.custom['ext'] = []
     engine_traits.custom['sort'] = []
 
-    resp = get(base_url + '/search')
+    resp = get(f'{base_url}/search')
     if not resp.ok:  # type: ignore
         raise RuntimeError("Response from Anna's search page is not OK.")
     dom = html.fromstring(resp.text)  # type: ignore
@@ -170,10 +175,9 @@ def fetch_traits(engine_traits: EngineTraits):
             # print("ERROR: %s -> %s is unknown by babel" % (x.get("data-name"), eng_lang))
             continue
         sxng_lang = language_tag(locale)
-        conflict = engine_traits.languages.get(sxng_lang)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_lang):
             if conflict != eng_lang:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_lang, conflict, eng_lang))
+                print(f"CONFLICT: babel {sxng_lang} --> {conflict}, {eng_lang}")
             continue
         engine_traits.languages[sxng_lang] = eng_lang
 

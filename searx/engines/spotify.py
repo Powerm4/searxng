@@ -39,12 +39,16 @@ def request(query, params):
         'https://accounts.spotify.com/api/token',
         data={'grant_type': 'client_credentials'},
         headers={
-            'Authorization': 'Basic '
-            + base64.b64encode("{}:{}".format(api_client_id, api_client_secret).encode()).decode()
+            'Authorization': (
+                'Basic '
+                + base64.b64encode(
+                    f"{api_client_id}:{api_client_secret}".encode()
+                ).decode()
+            )
         },
     )
     j = loads(r.text)
-    params['headers'] = {'Authorization': 'Bearer {}'.format(j.get('access_token'))}
+    params['headers'] = {'Authorization': f"Bearer {j.get('access_token')}"}
 
     return params
 
@@ -60,7 +64,7 @@ def response(resp):
         if result['type'] == 'track':
             title = result['name']
             url = result['external_urls']['spotify']
-            content = '{} - {} - {}'.format(result['artists'][0]['name'], result['album']['name'], result['name'])
+            content = f"{result['artists'][0]['name']} - {result['album']['name']} - {result['name']}"
 
             # append result
             results.append(

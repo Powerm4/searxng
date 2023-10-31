@@ -69,8 +69,9 @@ def response(resp):
 
             url = base_invidious_url + videoid
             thumbs = result.get("videoThumbnails", [])
-            thumb = next((th for th in thumbs if th["quality"] == "sddefault"), None)
-            if thumb:
+            if thumb := next(
+                (th for th in thumbs if th["quality"] == "sddefault"), None
+            ):
                 thumbnail = thumb.get("url", "")
             else:
                 thumbnail = ""

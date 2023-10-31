@@ -52,9 +52,7 @@ safesearch_table = {0: 'both', 1: 'false', 2: 'false'}
 
 
 def minute_to_hm(minute):
-    if isinstance(minute, int):
-        return "%d:%02d" % (divmod(minute, 60))
-    return None
+    return "%d:%02d" % (divmod(minute, 60)) if isinstance(minute, int) else None
 
 
 def request(query, params):
@@ -84,12 +82,12 @@ def request(query, params):
     )
 
     if eng_lang is not None:
-        params['url'] += '&languageOneOf[]=' + eng_lang
-        params['url'] += '&boostLanguages[]=' + eng_lang
+        params['url'] += f'&languageOneOf[]={eng_lang}'
+        params['url'] += f'&boostLanguages[]={eng_lang}'
 
     if params['time_range'] in time_range_table:
         time = datetime.now().date() + time_range_table[params['time_range']]
-        params['url'] += '&startDate=' + time.isoformat()
+        params['url'] += f'&startDate={time.isoformat()}'
 
     return params
 
@@ -172,13 +170,12 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = language_tag(babel.Locale.parse(eng_tag))
         except babel.UnknownLocaleError:
-            print("ERROR: %s is unknown by babel" % eng_tag)
+            print(f"ERROR: {eng_tag} is unknown by babel")
             continue
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.languages[sxng_tag] = eng_tag
 

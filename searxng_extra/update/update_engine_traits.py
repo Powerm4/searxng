@@ -91,8 +91,8 @@ def fetch_traits_map():
         print(msg)
 
     traits_map = EngineTraitsMap.fetch_traits(log=log)
-    print("fetched properties from %s engines" % len(traits_map))
-    print("write json file: %s" % traits_map.ENGINE_TRAITS_FILE)
+    print(f"fetched properties from {len(traits_map)} engines")
+    print(f"write json file: {traits_map.ENGINE_TRAITS_FILE}")
     traits_map.save_data()
     return traits_map
 
@@ -108,8 +108,8 @@ def filter_locales(traits_map: EngineTraitsMap):
         for reg in eng.regions.keys():
             _[reg] = _.get(reg, 0) + 1
 
-    regions = set(k for k, v in _.items() if v >= min_eng_per_region)
-    lang_from_region = set(k.split('-')[0] for k in regions)
+    regions = {k for k, v in _.items() if v >= min_eng_per_region}
+    lang_from_region = {k.split('-')[0] for k in regions}
 
     _ = {}
     for eng in traits_map.values():
@@ -121,7 +121,7 @@ def filter_locales(traits_map: EngineTraitsMap):
                 continue
             _[lang] = _.get(lang, 0) + 1
 
-    languages = set(k for k, v in _.items() if v >= min_eng_per_lang)
+    languages = {k for k, v in _.items() if v >= min_eng_per_lang}
 
     sxng_tag_list = set()
     sxng_tag_list.update(regions)
@@ -172,23 +172,21 @@ class UnicodeEscape(str):
 def get_unicode_flag(locale: babel.Locale):
     """Determine a unicode flag (emoji) that fits to the ``locale``"""
 
-    emoji = lang2emoji.get(locale.language)
-    if emoji:
+    if emoji := lang2emoji.get(locale.language):
         return emoji
 
     if not locale.territory:
         return '\U0001F310'
 
-    emoji = lang2emoji.get(locale.territory.lower())
-    if emoji:
+    if emoji := lang2emoji.get(locale.territory.lower()):
         return emoji
 
     try:
-        c1 = lookup('REGIONAL INDICATOR SYMBOL LETTER ' + locale.territory[0])
-        c2 = lookup('REGIONAL INDICATOR SYMBOL LETTER ' + locale.territory[1])
-        # print("OK   : %s --> %s%s" % (locale, c1, c2))
+        c1 = lookup(f'REGIONAL INDICATOR SYMBOL LETTER {locale.territory[0]}')
+        c2 = lookup(f'REGIONAL INDICATOR SYMBOL LETTER {locale.territory[1]}')
+            # print("OK   : %s --> %s%s" % (locale, c1, c2))
     except KeyError as exc:
-        print("ERROR: %s --> %s" % (locale, exc))
+        print(f"ERROR: {locale} --> {exc}")
         return None
 
     return c1 + c2

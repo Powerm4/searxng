@@ -4,6 +4,7 @@
 
 """
 
+
 from urllib.parse import urlencode, urlparse, urlunparse, parse_qsl
 from json import loads
 
@@ -18,7 +19,7 @@ about = {
 }
 
 base_url = 'https://unsplash.com/'
-search_url = base_url + 'napi/search/photos?'
+search_url = f'{base_url}napi/search/photos?'
 categories = ['images']
 page_size = 20
 paging = True
@@ -42,16 +43,15 @@ def response(resp):
     json_data = loads(resp.text)
 
     if 'results' in json_data:
-        for result in json_data['results']:
-            results.append(
-                {
-                    'template': 'images.html',
-                    'url': clean_url(result['links']['html']),
-                    'thumbnail_src': clean_url(result['urls']['thumb']),
-                    'img_src': clean_url(result['urls']['raw']),
-                    'title': result.get('alt_description') or 'unknown',
-                    'content': result.get('description') or '',
-                }
-            )
-
+        results.extend(
+            {
+                'template': 'images.html',
+                'url': clean_url(result['links']['html']),
+                'thumbnail_src': clean_url(result['urls']['thumb']),
+                'img_src': clean_url(result['urls']['raw']),
+                'title': result.get('alt_description') or 'unknown',
+                'content': result.get('description') or '',
+            }
+            for result in json_data['results']
+        )
     return results

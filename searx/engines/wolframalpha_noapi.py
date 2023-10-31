@@ -76,8 +76,6 @@ def request(query, params):
 
 # get response from search-request
 def response(resp):
-    results = []
-
     resp_json = loads(resp.text)
 
     if not resp_json['queryresult']['success']:
@@ -106,7 +104,7 @@ def response(resp):
 
                 if pod_is_result or not result_content:
                     if pod_id != "Input":
-                        result_content = pod_title + ': ' + subpod['plaintext']
+                        result_content = f'{pod_title}: ' + subpod['plaintext']
 
             elif 'img' in subpod:
                 result_chunks.append({'label': pod_title, 'image': subpod['img']})
@@ -114,20 +112,20 @@ def response(resp):
     if not result_chunks:
         return []
 
-    results.append(
+    return [
         {
             'infobox': infobox_title,
             'attributes': result_chunks,
-            'urls': [{'title': 'Wolfram|Alpha', 'url': resp.request.headers['Referer']}],
-        }
-    )
-
-    results.append(
+            'urls': [
+                {
+                    'title': 'Wolfram|Alpha',
+                    'url': resp.request.headers['Referer'],
+                }
+            ],
+        },
         {
             'url': resp.request.headers['Referer'],
-            'title': 'Wolfram|Alpha (' + infobox_title + ')',
+            'title': f'Wolfram|Alpha ({infobox_title})',
             'content': result_content,
-        }
-    )
-
-    return results
+        },
+    ]

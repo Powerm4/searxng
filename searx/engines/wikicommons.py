@@ -40,7 +40,7 @@ def request(query, params):
         'uselang': language,
         'gsrlimit': number_of_results,
         'gsroffset': number_of_results * (params["pageno"] - 1),
-        'gsrsearch': "filetype:bitmap|drawing " + query,
+        'gsrsearch': f"filetype:bitmap|drawing {query}",
     }
 
     params["url"] = f"{base_url}/w/api.php{search_prefix}&{urlencode(args, safe=':|')}"

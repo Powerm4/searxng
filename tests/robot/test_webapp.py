@@ -15,7 +15,7 @@ def test_index(browser):
 
 def test_404(browser):
     # Visit URL
-    browser.visit(url + 'missing_link')
+    browser.visit(f'{url}missing_link')
     assert browser.is_text_present('Page not found')
 
 

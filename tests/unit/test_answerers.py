@@ -11,5 +11,5 @@ class AnswererTest(SearxTestCase):
         query = Mock()
         unicode_payload = 'árvíztűrő tükörfúrógép'
         for answerer in answerers:
-            query.query = '{} {}'.format(answerer.keywords[0], unicode_payload)
+            query.query = f'{answerer.keywords[0]} {unicode_payload}'
             self.assertTrue(isinstance(answerer.answer(query), list))

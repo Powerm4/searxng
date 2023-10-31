@@ -68,28 +68,26 @@ def search(query, _params):
     if not exact_match_only:
         return search_keys(query)
 
-    ret = _redis_client.hgetall(query)
-    if ret:
+    if ret := _redis_client.hgetall(query):
         ret['template'] = result_template
         return [ret]
 
     if ' ' in query:
         qset, rest = query.split(' ', 1)
-        ret = []
-        for res in _redis_client.hscan_iter(qset, match='*{}*'.format(rest)):
-            ret.append(
-                {
-                    res[0]: res[1],
-                    'template': result_template,
-                }
-            )
+        ret = [
+            {
+                res[0]: res[1],
+                'template': result_template,
+            }
+            for res in _redis_client.hscan_iter(qset, match=f'*{rest}*')
+        ]
         return ret
     return []
 
 
 def search_keys(query):
     ret = []
-    for key in _redis_client.scan_iter(match='*{}*'.format(query)):
+    for key in _redis_client.scan_iter(match=f'*{query}*'):
         key_type = _redis_client.type(key)
         res = None
 

@@ -21,9 +21,7 @@ def get_imdb_url_id(imdb_item_id):
 def get_wikimedia_image_id(url):
     if url.startswith(HTTP_WIKIMEDIA_IMAGE):
         return url[len(HTTP_WIKIMEDIA_IMAGE) :]
-    if url.startswith('File:'):
-        return url[len('File:') :]
-    return url
+    return url[len('File:') :] if url.startswith('File:') else url
 
 
 def get_external_url(url_id, item_id, alternative="default"):
@@ -40,25 +38,20 @@ def get_external_url(url_id, item_id, alternative="default"):
         elif url_id == 'wikimedia_image':
             item_id = get_wikimedia_image_id(item_id)
 
-    url_description = EXTERNAL_URLS.get(url_id)
-    if url_description:
+    if url_description := EXTERNAL_URLS.get(url_id):
         url_template = url_description["urls"].get(alternative)
         if url_template is not None:
-            if item_id is not None:
-                return url_template.replace('$1', item_id)
-            else:
-                return url_template
+            return url_template if item_id is None else url_template.replace('$1', item_id)
     return None
 
 
 def get_earth_coordinates_url(latitude, longitude, osm_zoom, alternative='default'):
-    url = (
+    return (
         get_external_url('map', None, alternative)
         .replace('${latitude}', str(latitude))
         .replace('${longitude}', str(longitude))
         .replace('${zoom}', str(osm_zoom))
     )
-    return url
 
 
 def area_to_osm_zoom(area):

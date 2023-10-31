@@ -62,11 +62,11 @@ def response(resp):
 
         title = entry['l']
         if 'q' in entry:
-            title += " (%s)" % entry['q']
+            title += f" ({entry['q']})"
 
         content = ''
         if 'rank' in entry:
-            content += "(%s) " % entry['rank']
+            content += f"({entry['rank']}) "
         if 'y' in entry:
             content += str(entry['y']) + " - "
         if 's' in entry:
@@ -85,7 +85,7 @@ def response(resp):
             # 280,414 : size of the image (add white border)
             magic = 'QL75_UX280_CR0,0,280,414_'
             if not image_url_name.endswith('_V1_'):
-                magic = '_V1_' + magic
+                magic = f'_V1_{magic}'
             image_url = image_url_name + magic + '.' + image_url_prefix
         results.append(
             {

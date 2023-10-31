@@ -67,9 +67,9 @@ def request(query, params):
 
     if params['time_range']:
         query_params['form'] = 'VRFLTR'
-        query_params['qft'] = ' filterui:videoage-lt%s' % time_map[params['time_range']]
+        query_params['qft'] = f" filterui:videoage-lt{time_map[params['time_range']]}"
 
-    params['url'] = base_url + '?' + urlencode(query_params)
+    params['url'] = f'{base_url}?{urlencode(query_params)}'
 
     return params
 

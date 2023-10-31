@@ -93,10 +93,12 @@ def response(resp):
                 'title': result['title'],
                 'content': result['description'] or '',
                 'publishedDate': parser.parse(result['last_modified']),
-                'iframe_src': "https://w.soundcloud.com/player/?url=" + uri,
+                'iframe_src': f"https://w.soundcloud.com/player/?url={uri}",
             }
-            img_src = result['artwork_url'] or result['user']['avatar_url']
-            if img_src:
+            if (
+                img_src := result['artwork_url']
+                or result['user']['avatar_url']
+            ):
                 res['img_src'] = img_src
             results.append(res)
 

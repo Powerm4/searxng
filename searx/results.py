@@ -78,15 +78,13 @@ def merge_two_infoboxes(infobox1, infobox2):
             urls1 = []
 
         for url2 in infobox2.get('urls', []):
-            unique_url = True
             parsed_url2 = urlparse(url2.get('url', ''))
             entity_url2 = url2.get('entity')
-            for url1 in urls1:
-                if (entity_url2 is not None and url1.get('entity') == entity_url2) or compare_urls(
-                    urlparse(url1.get('url', '')), parsed_url2
-                ):
-                    unique_url = False
-                    break
+            unique_url = not any(
+                (entity_url2 is not None and url1.get('entity') == entity_url2)
+                or compare_urls(urlparse(url1.get('url', '')), parsed_url2)
+                for url1 in urls1
+            )
             if unique_url:
                 urls1.append(url2)
 
@@ -95,11 +93,8 @@ def merge_two_infoboxes(infobox1, infobox2):
     if 'img_src' in infobox2:
         img1 = infobox1.get('img_src', None)
         img2 = infobox2.get('img_src')
-        if img1 is None:
+        if img1 is None or weight2 > weight1:
             infobox1['img_src'] = img2
-        elif weight2 > weight1:
-            infobox1['img_src'] = img2
-
     if 'attributes' in infobox2:
         attributes1 = infobox1.get('attributes')
         if attributes1 is None:
@@ -121,10 +116,11 @@ def merge_two_infoboxes(infobox1, infobox2):
     if 'content' in infobox2:
         content1 = infobox1.get('content', None)
         content2 = infobox2.get('content', '')
-        if content1 is not None:
-            if result_content_len(content2) > result_content_len(content1):
-                infobox1['content'] = content2
-        else:
+        if (
+            content1 is not None
+            and result_content_len(content2) > result_content_len(content1)
+            or content1 is None
+        ):
             infobox1['content'] = content2
 
 
@@ -225,9 +221,9 @@ class ResultContainer:
                 self.__merge_result_no_url(result, standard_result_count + 1)
                 standard_result_count += 1
 
-        if len(error_msgs) > 0:
+        if error_msgs:
             for msg in error_msgs:
-                count_error(engine_name, 'some results are invalids: ' + msg, secondary=True)
+                count_error(engine_name, f'some results are invalids: {msg}', secondary=True)
 
         if engine_name in engines:
             histogram_observe(standard_result_count, 'engine', engine_name, 'result', 'count')
@@ -238,7 +234,7 @@ class ResultContainer:
     def _merge_infobox(self, infobox):
         add_infobox = True
         infobox_id = infobox.get('id', None)
-        infobox['engines'] = set([infobox['engine']])
+        infobox['engines'] = {infobox['engine']}
         if infobox_id is not None:
             parsed_url_infobox_id = urlparse(infobox_id)
             with self._lock:
@@ -292,10 +288,9 @@ class ResultContainer:
             result['content'] = WHITESPACE_REGEX.sub(' ', result['content'])
 
     def __merge_url_result(self, result, position):
-        result['engines'] = set([result['engine']])
+        result['engines'] = {result['engine']}
         with self._lock:
-            duplicated = self.__find_duplicated_http_result(result)
-            if duplicated:
+            if duplicated := self.__find_duplicated_http_result(result):
                 self.__merge_duplicated_http_result(duplicated, result, position)
                 return
 
@@ -314,11 +309,10 @@ class ResultContainer:
                 if result_template != 'images.html':
                     # not an image, same template, same url : it's a duplicate
                     return merged_result
-                else:
-                    # it's an image
-                    # it's a duplicate if the parsed_url, template and img_src are different
-                    if result.get('img_src', '') == merged_result.get('img_src', ''):
-                        return merged_result
+                # it's an image
+                # it's a duplicate if the parsed_url, template and img_src are different
+                if result.get('img_src', '') == merged_result.get('img_src', ''):
+                    return merged_result
         return None
 
     def __merge_duplicated_http_result(self, duplicated, result, position):
@@ -343,7 +337,7 @@ class ResultContainer:
             duplicated['parsed_url'] = result['parsed_url']
 
     def __merge_result_no_url(self, result, position):
-        result['engines'] = set([result['engine']])
+        result['engines'] = {result['engine']}
         result['positions'] = [position]
         with self._lock:
             self._merged_results.append(result)

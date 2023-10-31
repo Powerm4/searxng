@@ -72,12 +72,12 @@ def request(query, params):
     )
 
     if eng_lang is not None:
-        params['url'] += '&languageOneOf[]=' + eng_lang
-        params['url'] += '&boostLanguages[]=' + eng_lang
+        params['url'] += f'&languageOneOf[]={eng_lang}'
+        params['url'] += f'&boostLanguages[]={eng_lang}'
 
     if params['time_range'] in time_range_table:
         time = datetime.now().date() + time_range_table[params['time_range']]
-        params['url'] += '&startDate=' + time.isoformat()
+        params['url'] += f'&startDate={time.isoformat()}'
 
     return params
 

@@ -63,23 +63,19 @@ def response(resp):
             url = source['downloadUrl']
 
         if url is None and source.get('identifiers'):
-            # try to find an ark id, see
-            # https://www.wikidata.org/wiki/Property:P8091
-            # and https://en.wikipedia.org/wiki/Archival_Resource_Key
-            arkids = [
+            if arkids := [
                 identifier[5:]  # 5 is the length of "ark:/"
                 for identifier in source.get('identifiers')
-                if isinstance(identifier, str) and identifier.startswith('ark:/')
-            ]
-            if len(arkids) > 0:
-                url = 'https://n2t.net/' + arkids[0]
+                if isinstance(identifier, str)
+                and identifier.startswith('ark:/')
+            ]:
+                url = f'https://n2t.net/{arkids[0]}'
 
         if url is None:
             continue
 
         publishedDate = None
-        time = source['publishedDate'] or source['depositedDate']
-        if time:
+        if time := source['publishedDate'] or source['depositedDate']:
             publishedDate = datetime.fromtimestamp(time / 1000)
 
         # sometimes the 'title' is None / filter None values

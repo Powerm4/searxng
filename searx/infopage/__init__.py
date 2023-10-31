@@ -86,11 +86,11 @@ class InfoPage:
 
         def _md_link(name, url):
             url = url_for(url, _external=True)
-            return "[%s](%s)" % (name, url)
+            return f"[{name}]({url})"
 
         def _md_search(query):
             url = '%s?q=%s' % (url_for('search', _external=True), urllib.parse.quote(query))
-            return '[%s](%s)' % (query, url)
+            return f'[{query}]({url})'
 
         ctx = {}
         ctx['GIT_URL'] = GIT_URL

@@ -130,16 +130,6 @@ def get_google_info(params, eng_traits):
 
     """
 
-    ret_val = {
-        'language': None,
-        'country': None,
-        'subdomain': None,
-        'params': {},
-        'headers': {},
-        'cookies': {},
-        'locale': None,
-    }
-
     sxng_locale = params.get('searxng_locale', 'all')
     try:
         locale = babel.Locale.parse(sxng_locale, sep='-')
@@ -150,19 +140,17 @@ def get_google_info(params, eng_traits):
     lang_code = eng_lang.split('_')[-1]  # lang_zh-TW --> zh-TW / lang_en --> en
     country = eng_traits.get_region(sxng_locale, eng_traits.all_locale)
 
-    # Test zh_hans & zh_hant --> in the topmost links in the result list of list
-    # TW and HK you should a find wiktionary.org zh_hant link.  In the result
-    # list of zh-CN should not be no hant link instead you should find
-    # zh.m.wikipedia.org/zh somewhere in the top.
-
-    # '!go 日 :zh-TW' --> https://zh.m.wiktionary.org/zh-hant/%E6%97%A5
-    # '!go 日 :zh-CN' --> https://zh.m.wikipedia.org/zh/%E6%97%A5
-
-    ret_val['language'] = eng_lang
-    ret_val['country'] = country
-    ret_val['locale'] = locale
-    ret_val['subdomain'] = eng_traits.custom['supported_domains'].get(country.upper(), 'www.google.com')
-
+    ret_val = {
+        'params': {},
+        'headers': {},
+        'cookies': {},
+        'language': eng_lang,
+        'country': country,
+        'locale': locale,
+        'subdomain': eng_traits.custom['supported_domains'].get(
+            country.upper(), 'www.google.com'
+        ),
+    }
     # hl parameter:
     #   The hl parameter specifies the interface language (host language) of
     #   your user interface. To improve the performance and the quality of your
@@ -202,7 +190,7 @@ def get_google_info(params, eng_traits):
     # locale --> https://github.com/searxng/searxng/issues/2672
     ret_val['params']['cr'] = ''
     if len(sxng_locale.split('-')) > 1:
-        ret_val['params']['cr'] = 'country' + country
+        ret_val['params']['cr'] = f'country{country}'
 
     # gl parameter: (mandatory by Google News)
     #   The gl parameter value is a two-letter country code. For WebSearch
@@ -325,22 +313,19 @@ def response(resp):
     # pylint: disable=too-many-branches, too-many-statements
     detect_google_sorry(resp)
 
-    results = []
-
     # convert the text to dom
     dom = html.fromstring(resp.text)
     data_image_map = _parse_data_images(dom)
 
     # results --> answer
     answer_list = eval_xpath(dom, '//div[contains(@class, "LGOjhe")]')
-    for item in answer_list:
-        results.append(
-            {
-                'answer': item.xpath("normalize-space()"),
-                'url': (eval_xpath(item, '../..//a/@href') + [None])[0],
-            }
-        )
-
+    results = [
+        {
+            'answer': item.xpath("normalize-space()"),
+            'url': (eval_xpath(item, '../..//a/@href') + [None])[0],
+        }
+        for item in answer_list
+    ]
     # parse results
 
     for result in eval_xpath_list(dom, results_xpath):  # pylint: disable=too-many-nested-blocks
@@ -369,8 +354,7 @@ def response(resp):
             if img_src:
                 img_src = img_src[0]
                 if img_src.startswith('data:image'):
-                    img_id = content_nodes[0].xpath('.//img/@id')
-                    if img_id:
+                    if img_id := content_nodes[0].xpath('.//img/@id'):
                         img_src = data_image_map.get(img_id[0])
             else:
                 img_src = None
@@ -382,10 +366,10 @@ def response(resp):
             continue
 
     # parse suggestion
-    for suggestion in eval_xpath_list(dom, suggestion_xpath):
-        # append suggestion
-        results.append({'suggestion': extract_text(suggestion)})
-
+    results.extend(
+        {'suggestion': extract_text(suggestion)}
+        for suggestion in eval_xpath_list(dom, suggestion_xpath)
+    )
     # return results
     return results
 
@@ -440,16 +424,15 @@ def fetch_traits(engine_traits: EngineTraits, add_domains: bool = True):
         try:
             locale = babel.Locale.parse(lang_map.get(eng_lang, eng_lang), sep='-')
         except babel.UnknownLocaleError:
-            print("ERROR: %s -> %s is unknown by babel" % (x.get("data-name"), eng_lang))
+            print(f'ERROR: {x.get("data-name")} -> {eng_lang} is unknown by babel')
             continue
         sxng_lang = language_tag(locale)
 
-        conflict = engine_traits.languages.get(sxng_lang)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_lang):
             if conflict != eng_lang:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_lang, conflict, eng_lang))
+                print(f"CONFLICT: babel {sxng_lang} --> {conflict}, {eng_lang}")
             continue
-        engine_traits.languages[sxng_lang] = 'lang_' + eng_lang
+        engine_traits.languages[sxng_lang] = f'lang_{eng_lang}'
 
     # alias languages
     engine_traits.languages['zh'] = 'lang_zh-CN'
@@ -468,7 +451,9 @@ def fetch_traits(engine_traits: EngineTraits, add_domains: bool = True):
         sxng_locales = get_official_locales(eng_country, engine_traits.languages.keys(), regional=True)
 
         if not sxng_locales:
-            print("ERROR: can't map from google country %s (%s) to a babel region." % (x.get('data-name'), eng_country))
+            print(
+                f"ERROR: can't map from google country {x.get('data-name')} ({eng_country}) to a babel region."
+            )
             continue
 
         for sxng_locale in sxng_locales:
@@ -491,7 +476,7 @@ def fetch_traits(engine_traits: EngineTraits, add_domains: bool = True):
             ]:
                 continue
             region = domain.split('.')[-1].upper()
-            engine_traits.custom['supported_domains'][region] = 'www' + domain  # type: ignore
+            engine_traits.custom['supported_domains'][region] = f'www{domain}'
             if region == 'HK':
                 # There is no google.cn, we use .com.hk for zh-CN
-                engine_traits.custom['supported_domains']['CN'] = 'www' + domain  # type: ignore
+                engine_traits.custom['supported_domains']['CN'] = f'www{domain}'

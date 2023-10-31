@@ -13,7 +13,7 @@ def request(query, params):
       pageno  : 1 # number of the requested page
     '''
 
-    params['url'] = 'https://host/%s' % query
+    params['url'] = f'https://host/{query}'
 
     return params
 

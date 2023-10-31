@@ -85,29 +85,29 @@ def setup(app):
     app.connect('source-read', source_read)
 
 # usage::   lorem :patch:`f373169` ipsum
-extlinks = {}
-
-# upstream links
-extlinks['wiki'] = ('https://github.com/searxng/searxng/wiki/%s', ' %s')
-extlinks['pull'] = ('https://github.com/searxng/searxng/pull/%s', 'PR %s')
-extlinks['pull-searx'] = ('https://github.com/searx/searx/pull/%s', 'PR %s')
-
-# links to custom brand
-extlinks['origin'] = (GIT_URL + '/blob/' + GIT_BRANCH + '/%s', 'git://%s')
-extlinks['patch'] = (GIT_URL + '/commit/%s', '#%s')
-extlinks['docs'] = (DOCS_URL + '/%s', 'docs: %s')
-extlinks['pypi'] = ('https://pypi.org/project/%s', 'PyPi: %s')
-extlinks['man'] = ('https://manpages.debian.org/jump?q=%s', '%s')
-#extlinks['role'] = (
-#    'https://www.sphinx-doc.org/en/master/usage/restructuredtext/roles.html#role-%s', '')
-extlinks['duref'] = (
-    'https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#%s', '%s')
-extlinks['durole'] = (
-    'https://docutils.sourceforge.io/docs/ref/rst/roles.html#%s', '%s')
-extlinks['dudir'] =  (
-    'https://docutils.sourceforge.io/docs/ref/rst/directives.html#%s', '%s')
-extlinks['ctan'] =  (
-    'https://ctan.org/pkg/%s', 'CTAN: %s')
+extlinks = {
+    'wiki': ('https://github.com/searxng/searxng/wiki/%s', ' %s'),
+    'pull': ('https://github.com/searxng/searxng/pull/%s', 'PR %s'),
+    'pull-searx': ('https://github.com/searx/searx/pull/%s', 'PR %s'),
+    'origin': (f'{GIT_URL}/blob/{GIT_BRANCH}/%s', 'git://%s'),
+    'patch': (f'{GIT_URL}/commit/%s', '#%s'),
+    'docs': (f'{DOCS_URL}/%s', 'docs: %s'),
+    'pypi': ('https://pypi.org/project/%s', 'PyPi: %s'),
+    'man': ('https://manpages.debian.org/jump?q=%s', '%s'),
+    'duref': (
+        'https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#%s',
+        '%s',
+    ),
+    'durole': (
+        'https://docutils.sourceforge.io/docs/ref/rst/roles.html#%s',
+        '%s',
+    ),
+    'dudir': (
+        'https://docutils.sourceforge.io/docs/ref/rst/directives.html#%s',
+        '%s',
+    ),
+    'ctan': ('https://ctan.org/pkg/%s', 'CTAN: %s'),
+}
 
 extensions = [
     'sphinx.ext.imgmath',
@@ -171,7 +171,9 @@ imgmath_font_size = 14
 html_show_sphinx = False
 html_theme_options = {"index_sidebar_logo": True}
 html_context = {"project_links": [] }
-html_context["project_links"].append(ProjectLink("Source", GIT_URL + '/tree/' + GIT_BRANCH))
+html_context["project_links"].append(
+    ProjectLink("Source", f'{GIT_URL}/tree/{GIT_BRANCH}')
+)
 
 if WIKI_URL:
     html_context["project_links"].append(ProjectLink("Wiki", WIKI_URL))
@@ -195,11 +197,11 @@ html_sidebars = {
 }
 singlehtml_sidebars = {"index": ["project.html", "localtoc.html"]}
 html_logo = "../src/brand/searxng-wordmark.svg"
-html_title = "SearXNG Documentation ({})".format(VERSION_STRING)
+html_title = f"SearXNG Documentation ({VERSION_STRING})"
 html_show_sourcelink = True
 
 # LaTeX ----------------------------------------------------------------
 
 latex_documents = [
-    (master_doc, "searxng-{}.tex".format(VERSION_STRING), html_title, author, "manual")
+    (master_doc, f"searxng-{VERSION_STRING}.tex", html_title, author, "manual")
 ]

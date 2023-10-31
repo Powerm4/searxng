@@ -34,11 +34,10 @@ def obtain_token():
         actual_token = http_get(
             'https://cdn.apple-mapkit.com/ma/bootstrap?apiVersion=2&mkjsVersion=5.72.53&poi=1',
             timeout=2.0,
-            headers={'Authorization': 'Bearer ' + token_response.text},
+            headers={'Authorization': f'Bearer {token_response.text}'},
         )
         token['value'] = loads(actual_token.text)['authInfo']['access_token']
         token['last_updated'] = update_time
-    # pylint: disable=bare-except
     except:
         pass
     return token
@@ -74,7 +73,7 @@ def response(resp):
             links.append(
                 {
                     'label': get_key_label('phone', user_language),
-                    'url': 'tel:' + telephone,
+                    'url': f'tel:{telephone}',
                     'url_label': telephone,
                 }
             )

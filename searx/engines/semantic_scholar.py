@@ -53,11 +53,10 @@ def response(resp):
         if not url and result.get('links'):
             url = result.get('links')[0]
         if not url:
-            alternatePaperLinks = result.get('alternatePaperLinks')
-            if alternatePaperLinks:
+            if alternatePaperLinks := result.get('alternatePaperLinks'):
                 url = alternatePaperLinks[0].get('url')
         if not url:
-            url = paper_url + '/%s' % result['id']
+            url = f"{paper_url}/{result['id']}"
 
         # publishedDate
         if 'pubDate' in result:
@@ -68,13 +67,14 @@ def response(resp):
         # authors
         authors = [author[0]['name'] for author in result.get('authors', [])]
 
-        # pick for the first alternate link, but not from the crawler
-        pdf_url = None
-        for doc in result.get('alternatePaperLinks', []):
-            if doc['linkType'] not in ('crawler', 'doi'):
-                pdf_url = doc['url']
-                break
-
+        pdf_url = next(
+            (
+                doc['url']
+                for doc in result.get('alternatePaperLinks', [])
+                if doc['linkType'] not in ('crawler', 'doi')
+            ),
+            None,
+        )
         # comments
         comments = None
         if 'citationStats' in result:

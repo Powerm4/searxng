@@ -35,9 +35,7 @@ def response(resp):
     docs = data.get('response', {}).get('docs', [])
 
     for current in docs:
-        item = {}
-        item['url'] = current['id']
-        item['title'] = current['title_txt_txt_en']
+        item = {'url': current['id'], 'title': current['title_txt_txt_en']}
         if current.get('content_txt'):
             item['content'] = current['content_txt'][0]
         item['publishedDate'] = parser.parse(current['file_modified_dt'])

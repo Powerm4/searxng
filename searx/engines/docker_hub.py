@@ -40,9 +40,7 @@ def response(resp):
     results = []
     body = loads(resp.text)
 
-    # Make sure `summaries` isn't `null`
-    search_res = body.get("summaries")
-    if search_res:
+    if search_res := body.get("summaries"):
         for item in search_res:
             result = {}
 
@@ -51,9 +49,9 @@ def response(resp):
             is_official = filter_type in ["store", "official"]
 
             if is_official:
-                result["url"] = base_url + "_/" + item.get('slug', "")
+                result["url"] = f"{base_url}_/" + item.get('slug', "")
             else:
-                result["url"] = base_url + "r/" + item.get('slug', "")
+                result["url"] = f"{base_url}r/" + item.get('slug', "")
             result["title"] = item.get("name")
             result["content"] = item.get("short_description")
             result["publishedDate"] = parser.parse(item.get("updated_at") or item.get("created_at"))

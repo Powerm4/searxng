@@ -116,7 +116,7 @@ def filter_request(request: flask.Request) -> werkzeug.Response | None:
     match, msg = ip_lists.block_ip(real_ip, cfg)
     if match:
         logger.error("BLOCK %s: matched BLOCKLIST - %s", network.compressed, msg)
-        return flask.make_response(('IP is on BLOCKLIST - %s' % msg, 429))
+        return flask.make_response((f'IP is on BLOCKLIST - {msg}', 429))
 
     # methods applied on /
 

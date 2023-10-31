@@ -49,21 +49,19 @@ def response(resp):
     results = []
     json_data = loads(resp.text)
 
-    for result in json_data['data']:
-
-        if not result['image_id']:
-            continue
-
-        results.append(
-            {
-                'url': 'https://artic.edu/artworks/%(id)s' % result,
-                'title': result['title'] + " (%(date_display)s) //  %(artist_display)s" % result,
-                'content': result['medium_display'],
-                'author': ', '.join(result['artist_titles']),
-                'img_src': image_api + '/%(image_id)s/full/843,/0/default.jpg' % result,
-                'img_format': result['dimensions'],
-                'template': 'images.html',
-            }
-        )
-
+    results.extend(
+        {
+            'url': 'https://artic.edu/artworks/%(id)s' % result,
+            'title': result['title']
+            + " (%(date_display)s) //  %(artist_display)s" % result,
+            'content': result['medium_display'],
+            'author': ', '.join(result['artist_titles']),
+            'img_src': image_api
+            + '/%(image_id)s/full/843,/0/default.jpg' % result,
+            'img_format': result['dimensions'],
+            'template': 'images.html',
+        }
+        for result in json_data['data']
+        if result['image_id']
+    )
     return results

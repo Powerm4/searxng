@@ -74,8 +74,7 @@ def get_search_query(
     preferences = searx.preferences.Preferences(['simple'], engine_categories, searx.engines.engines, [])
     preferences.key_value_settings['safesearch'].parse(args.safesearch)
 
-    search_query = searx.webadapter.get_search_query_from_webapp(preferences, form)[0]
-    return search_query
+    return searx.webadapter.get_search_query_from_webapp(preferences, form)[0]
 
 
 def no_parsed_url(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -91,19 +90,18 @@ def json_serial(obj: Any) -> Any:
     :raise TypeError: raised when **obj** is not serializable
     """
     if isinstance(obj, datetime):
-        serial = obj.isoformat()
-        return serial
+        return obj.isoformat()
     if isinstance(obj, bytes):
         return obj.decode('utf8')
     if isinstance(obj, set):
         return list(obj)
-    raise TypeError("Type ({}) not serializable".format(type(obj)))
+    raise TypeError(f"Type ({type(obj)}) not serializable")
 
 
 def to_dict(search_query: searx.search.SearchQuery) -> Dict[str, Any]:
     """Get result from parsed arguments."""
     result_container = searx.search.Search(search_query).search()
-    result_container_json = {
+    return {
         "search": {
             "q": search_query.query,
             "pageno": search_query.pageno,
@@ -118,7 +116,6 @@ def to_dict(search_query: searx.search.SearchQuery) -> Dict[str, Any]:
         "paging": result_container.paging,
         "number_of_results": result_container.number_of_results,
     }
-    return result_container_json
 
 
 def parse_argument(

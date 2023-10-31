@@ -123,7 +123,7 @@ def get_wikipedia_summary(wikipedia_url, searxng_locale):
     article_name = parsed_url.path.split('/wiki/')[1]
     # article_name is already encoded but not the / which is required for the REST API call
     encoded_article_name = article_name.replace('/', '%2F')
-    path = '/api/rest_v1/page/summary/' + encoded_article_name
+    path = f'/api/rest_v1/page/summary/{encoded_article_name}'
     wikipedia_rest_url = parsed_url._replace(path=path).geturl()
     try:
         response = searx.network.get(wikipedia_rest_url, headers=headers, timeout=10)
@@ -201,7 +201,9 @@ def initialize():
         if wikidata_id is not None:
             wd_to_engine_name.setdefault(wikidata_id, set()).add(engine_name)
 
-    IDS = ' '.join(list(map(lambda wd_id: 'wd:' + wd_id, wd_to_engine_name.keys())))
+    IDS = ' '.join(
+        list(map(lambda wd_id: f'wd:{wd_id}', wd_to_engine_name.keys()))
+    )
 
 
 def fetch_wikidata_descriptions():
@@ -268,7 +270,7 @@ def fetch_website_description(engine_name, website):
     # to specify an order in where the most common languages are in front of the
     # language list ..
     languages = ['en', 'es', 'pt', 'ru', 'tr', 'fr']
-    languages = languages + [l for l in LOCALE_NAMES if l not in languages]
+    languages += [l for l in LOCALE_NAMES if l not in languages]
 
     previous_matched_lang = None
     previous_count = 0

@@ -47,9 +47,9 @@ def response(resp):
             url = result['link']
 
             if url.startswith('http://'):
-                url = 'https' + url[4:]
+                url = f'https{url[4:]}'
 
-            content = '{} - {} - {}'.format(result['artist']['name'], result['album']['title'], result['title'])
+            content = f"{result['artist']['name']} - {result['album']['title']} - {result['title']}"
 
             # append result
             results.append(

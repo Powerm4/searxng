@@ -31,7 +31,7 @@ def random_int():
 def random_sha256():
     m = hashlib.sha256()
     m.update(''.join(random_characters()).encode())
-    return str(m.hexdigest())
+    return m.hexdigest()
 
 
 def random_uuid():
@@ -72,5 +72,5 @@ def self_info():
     return {
         'name': gettext('Random value generator'),
         'description': gettext('Generate different random values'),
-        'examples': ['random {}'.format(x) for x in random_types],
+        'examples': [f'random {x}' for x in random_types],
     }

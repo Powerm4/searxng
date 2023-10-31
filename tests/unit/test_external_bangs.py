@@ -12,18 +12,18 @@ from tests import SearxTestCase
 TEST_DB = {
     'trie': {
         'exam': {
-            'ple': '//example.com/' + chr(2) + chr(1) + '0',
-            LEAF_KEY: '//wikipedia.org/wiki/' + chr(2) + chr(1) + '0',
+            'ple': f'//example.com/{chr(2)}{chr(1)}0',
+            LEAF_KEY: f'//wikipedia.org/wiki/{chr(2)}{chr(1)}0',
         },
         'sea': {
-            LEAF_KEY: 'sea' + chr(2) + chr(1) + '0',
+            LEAF_KEY: f'sea{chr(2)}{chr(1)}0',
             'rch': {
-                LEAF_KEY: 'search' + chr(2) + chr(1) + '0',
-                'ing': 'searching' + chr(2) + chr(1) + '0',
+                LEAF_KEY: f'search{chr(2)}{chr(1)}0',
+                'ing': f'searching{chr(2)}{chr(1)}0',
             },
             's': {
-                'on': 'season' + chr(2) + chr(1) + '0',
-                'capes': 'seascape' + chr(2) + chr(1) + '0',
+                'on': f'season{chr(2)}{chr(1)}0',
+                'capes': f'seascape{chr(2)}{chr(1)}0',
             },
         },
         'error': ['error in external_bangs.json'],
@@ -64,12 +64,16 @@ class TestGetNode(SearxTestCase):
 
 class TestResolveBangDefinition(SearxTestCase):
     def test_https(self):
-        url, rank = resolve_bang_definition('//example.com/' + chr(2) + chr(1) + '42', 'query')
+        url, rank = resolve_bang_definition(
+            f'//example.com/{chr(2)}{chr(1)}42', 'query'
+        )
         self.assertEqual(url, 'https://example.com/query')
         self.assertEqual(rank, 42)
 
     def test_http(self):
-        url, rank = resolve_bang_definition('http://example.com/' + chr(2) + chr(1) + '0', 'text')
+        url, rank = resolve_bang_definition(
+            f'http://example.com/{chr(2)}{chr(1)}0', 'text'
+        )
         self.assertEqual(url, 'http://example.com/text')
         self.assertEqual(rank, 0)
 

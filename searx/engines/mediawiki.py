@@ -115,9 +115,9 @@ def request(query, params):
         params['language'] = params['language'].split('-')[0]
 
     if base_url.endswith('/'):
-        api_url = base_url + 'w/api.php?'
+        api_url = f'{base_url}w/api.php?'
     else:
-        api_url = base_url + '/w/api.php?'
+        api_url = f'{base_url}/w/api.php?'
     api_url = api_url.format(language=params['language'])
 
     offset = (params['pageno'] - 1) * number_of_results
@@ -167,7 +167,7 @@ def response(resp):
         if sectiontitle:
             # in case of sectiontitle create a link to the section in the wiki page
             url += '#' + quote(sectiontitle.replace(' ', '_').encode())
-            title += ' / ' + sectiontitle
+            title += f' / {sectiontitle}'
 
         item = {'url': url, 'title': title, 'content': content, 'metadata': metadata}
 

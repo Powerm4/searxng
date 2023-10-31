@@ -42,7 +42,7 @@ def request(query, params):
         value = e.get('value')
         url_params[name] = value
 
-    params['url'] = base_url + '?' + urlencode(url_params)
+    params['url'] = f'{base_url}?{urlencode(url_params)}'
     params['cookies'] = response_index.cookies
     return params
 

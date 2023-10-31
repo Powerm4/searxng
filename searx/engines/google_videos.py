@@ -130,8 +130,8 @@ def response(resp):
         )
 
     # parse suggestion
-    for suggestion in eval_xpath_list(dom, suggestion_xpath):
-        # append suggestion
-        results.append({'suggestion': extract_text(suggestion)})
-
+    results.extend(
+        {'suggestion': extract_text(suggestion)}
+        for suggestion in eval_xpath_list(dom, suggestion_xpath)
+    )
     return results

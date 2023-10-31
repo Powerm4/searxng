@@ -37,11 +37,7 @@ def get_setting(name, default=_unset):
     """
     value = settings
     for a in name.split('.'):
-        if isinstance(value, dict):
-            value = value.get(a, _unset)
-        else:
-            value = _unset
-
+        value = value.get(a, _unset) if isinstance(value, dict) else _unset
         if value is _unset:
             if default is _unset:
                 raise KeyError(name)

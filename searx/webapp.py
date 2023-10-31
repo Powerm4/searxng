@@ -192,8 +192,7 @@ babel = Babel(app, locale_selector=get_locale)
 
 def _get_browser_language(req, lang_list):
     client = ClientPref.from_http_request(req)
-    locale = match_locale(client.locale_tag, lang_list, fallback='en')
-    return locale
+    return match_locale(client.locale_tag, lang_list, fallback='en')
 
 
 def _get_locale_rfc5646(locale):
@@ -203,7 +202,7 @@ def _get_locale_rfc5646(locale):
     This function returns a locale without the subtag.
     """
     parts = locale.split('-')
-    return parts[0].lower() + '-' + parts[-1].upper()
+    return f'{parts[0].lower()}-{parts[-1].upper()}'
 
 
 # code-highlighter
@@ -217,7 +216,7 @@ def code_highlighter(codelines, language=None):
         lexer = get_lexer_by_name(language, stripall=True)
 
     except Exception as e:  # pylint: disable=broad-except
-        logger.warning("pygments lexer: %s " % e)
+        logger.warning(f"pygments lexer: {e} ")
         # if lexer is not found, using default one
         lexer = get_lexer_by_name('text', stripall=True)
 
@@ -256,10 +255,10 @@ def code_highlighter(codelines, language=None):
 
 
 def get_result_template(theme_name: str, template_name: str):
-    themed_path = theme_name + '/result_templates/' + template_name
+    themed_path = f'{theme_name}/result_templates/{template_name}'
     if themed_path in result_templates:
         return themed_path
-    return 'result_templates/' + template_name
+    return f'result_templates/{template_name}'
 
 
 def custom_url_for(endpoint: str, **values):
@@ -269,12 +268,12 @@ def custom_url_for(endpoint: str, **values):
         if not file_hash:
             # try file in the current theme
             theme_name = request.preferences.get_value('theme')
-            filename_with_theme = "themes/{}/{}".format(theme_name, values['filename'])
+            filename_with_theme = f"themes/{theme_name}/{values['filename']}"
             file_hash = static_files.get(filename_with_theme)
             if file_hash:
                 values['filename'] = filename_with_theme
         if get_setting('ui.static_use_hash') and file_hash:
-            suffix = "?" + file_hash
+            suffix = f"?{file_hash}"
     if endpoint == 'info' and 'locale' not in values:
         locale = request.preferences.get_value('locale')
         if _INFO_PAGES.get_page(values['pagename'], locale) is None:
@@ -285,7 +284,7 @@ def custom_url_for(endpoint: str, **values):
 
 def morty_proxify(url: str):
     if url.startswith('//'):
-        url = 'https:' + url
+        url = f'https:{url}'
 
     if not settings['result_proxy']['url']:
         return url
@@ -301,7 +300,7 @@ def morty_proxify(url: str):
 def image_proxify(url: str):
 
     if url.startswith('//'):
-        url = 'https:' + url
+        url = f'https:{url}'
 
     if not request.preferences.get_value('image_proxy'):
         return url
@@ -351,7 +350,7 @@ def get_pretty_url(parsed_url: urllib.parse.ParseResult):
     path = parsed_url.path
     path = path[:-1] if len(path) > 0 and path[-1] == '/' else path
     path = unquote(path.replace("/", " › "))
-    return [parsed_url.scheme + "://" + parsed_url.netloc, path]
+    return [f"{parsed_url.scheme}://{parsed_url.netloc}", path]
 
 
 def get_client_settings():
@@ -462,7 +461,7 @@ def render(template_name: str, **kwargs):
             kwargs['styles'].add(css)
 
     start_time = default_timer()
-    result = render_template('{}/{}'.format(kwargs['theme'], template_name), **kwargs)
+    result = render_template(f"{kwargs['theme']}/{template_name}", **kwargs)
     request.render_time += default_timer() - start_time  # pylint: disable=assigning-non-slot
 
     return result
@@ -544,16 +543,17 @@ def add_default_headers(response: flask.Response):
 def post_request(response: flask.Response):
     total_time = default_timer() - request.start_time
     timings_all = [
-        'total;dur=' + str(round(total_time * 1000, 3)),
-        'render;dur=' + str(round(request.render_time * 1000, 3)),
+        f'total;dur={str(round(total_time * 1000, 3))}',
+        f'render;dur={str(round(request.render_time * 1000, 3))}',
     ]
     if len(request.timings) > 0:
         timings = sorted(request.timings, key=lambda t: t.total)
         timings_total = [
-            'total_' + str(i) + '_' + t.engine + ';dur=' + str(round(t.total * 1000, 3)) for i, t in enumerate(timings)
+            f'total_{str(i)}_{t.engine};dur={str(round(t.total * 1000, 3))}'
+            for i, t in enumerate(timings)
         ]
         timings_load = [
-            'load_' + str(i) + '_' + t.engine + ';dur=' + str(round(t.load * 1000, 3))
+            f'load_{str(i)}_{t.engine};dur={str(round(t.load * 1000, 3))}'
             for i, t in enumerate(timings)
             if t.load
         ]
@@ -597,7 +597,7 @@ def index():
 
     # redirect to search if there's a query in the request
     if request.form.get('q'):
-        query = ('?' + request.query_string.decode()) if request.query_string else ''
+        query = f'?{request.query_string.decode()}' if request.query_string else ''
         return redirect(url_for('search') + query, 308)
 
     return render(
@@ -840,20 +840,20 @@ def autocompleter():
         sxng_locale = request.preferences.get_value('language')
         backend_name = request.preferences.get_value('autocomplete')
 
-        for result in search_autocomplete(backend_name, sug_prefix, sxng_locale):
-            # attention: this loop will change raw_text_query object and this is
-            # the reason why the sug_prefix was stored before (see above)
-            if result != sug_prefix:
-                results.append(raw_text_query.changeQuery(result).getFullQuery())
-
+        results.extend(
+            raw_text_query.changeQuery(result).getFullQuery()
+            for result in search_autocomplete(
+                backend_name, sug_prefix, sxng_locale
+            )
+            if result != sug_prefix
+        )
     if len(raw_text_query.autocomplete_list) > 0:
-        for autocomplete_text in raw_text_query.autocomplete_list:
-            results.append(raw_text_query.get_autocomplete_full_query(autocomplete_text))
-
+        results.extend(
+            raw_text_query.get_autocomplete_full_query(autocomplete_text)
+            for autocomplete_text in raw_text_query.autocomplete_list
+        )
     for answers in ask(raw_text_query):
-        for answer in answers:
-            results.append(str(answer['answer']))
-
+        results.extend(str(answer['answer']) for answer in answers)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         # the suggestion request comes from the searx search form
         suggestions = json.dumps(results)
@@ -908,7 +908,7 @@ def preferences():
     # and then the second element [1] : the time (the first one is the label)
     stats = {}  # pylint: disable=redefined-outer-name
     max_rate95 = 0
-    for _, e in filtered_engines.items():
+    for e in filtered_engines.values():
         h = histogram('engine', e.name, 'time', 'total')
         median = round(h.percentage(50), 1) if h.count > 0 else None
         rate80 = round(h.percentage(80), 1) if h.count > 0 else None
@@ -954,7 +954,11 @@ def preferences():
             reliability = 0
         else:
             # pylint: disable=consider-using-generator
-            reliability = 100 - sum([error['percentage'] for error in errors if not error.get('secondary')])
+            reliability = 100 - sum(
+                error['percentage']
+                for error in errors
+                if not error.get('secondary')
+            )
 
         reliabilities[e.name] = {
             'reliability': reliability,
@@ -1057,10 +1061,7 @@ def image_proxy():
 
         if resp.status_code != 200:
             logger.debug('image-proxy: wrong response code: %i', resp.status_code)
-            if resp.status_code >= 400:
-                return '', resp.status_code
-            return '', 400
-
+            return ('', resp.status_code) if resp.status_code >= 400 else ('', 400)
         if not resp.headers.get('Content-Type', '').startswith('image/') and not resp.headers.get(
             'Content-Type', ''
         ).startswith('binary/octet-stream'):
@@ -1215,8 +1216,11 @@ def opensearch():
         method = 'POST'
 
     ret = render('opensearch.xml', opensearch_method=method, autocomplete=autocomplete)
-    resp = Response(response=ret, status=200, mimetype="application/opensearchdescription+xml")
-    return resp
+    return Response(
+        response=ret,
+        status=200,
+        mimetype="application/opensearchdescription+xml",
+    )
 
 
 @app.route('/favicon.ico')
@@ -1262,10 +1266,7 @@ def config():
             }
         )
 
-    _plugins = []
-    for _ in plugins:
-        _plugins.append({'name': _.name, 'enabled': _.default_on})
-
+    _plugins = [{'name': _.name, 'enabled': _.default_on} for _ in plugins]
     _limiter_cfg = limiter.get_cfg()
 
     return jsonify(

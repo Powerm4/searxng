@@ -20,7 +20,9 @@ search_url = "https://api.crossref.org/works"
 
 
 def request(query, params):
-    params["url"] = search_url + "?" + urlencode({"query": query, "offset": 20 * (params["pageno"] - 1)})
+    params["url"] = f"{search_url}?" + urlencode(
+        {"query": query, "offset": 20 * (params["pageno"] - 1)}
+    )
     return params
 
 

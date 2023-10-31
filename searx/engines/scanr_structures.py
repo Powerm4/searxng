@@ -3,6 +3,7 @@
  ScanR Structures (Science)
 """
 
+
 from json import loads, dumps
 from searx.utils import html_to_text
 
@@ -23,7 +24,7 @@ page_size = 20
 
 # search-url
 url = 'https://scanr.enseignementsup-recherche.gouv.fr/'
-search_url = url + 'api/structures/search'
+search_url = f'{url}api/structures/search'
 
 
 # do search-request
@@ -75,9 +76,8 @@ def response(resp):
         # append result
         results.append(
             {
-                'url': url + 'structure/' + result['id'],
+                'url': f'{url}structure/' + result['id'],
                 'title': result['label'],
-                # 'thumbnail': thumbnail,
                 'img_src': thumbnail,
                 'content': html_to_text(content),
             }

@@ -48,10 +48,14 @@ def response(resp):
         return []
 
     for tag in search_res[1:]:
-        result = {'template': 'torrent.html'}
         url = eval_xpath_getindex(tag, './/a[contains(@class, "cellMainLink")]/@href', 0, None)
-        result['url'] = resp.search_params['base_url'] + url
-        result['title'] = extract_text(eval_xpath(tag, './/a[contains(@class, "cellMainLink")]'))
+        result = {
+            'template': 'torrent.html',
+            'url': resp.search_params['base_url'] + url,
+            'title': extract_text(
+                eval_xpath(tag, './/a[contains(@class, "cellMainLink")]')
+            ),
+        }
         result['content'] = extract_text(eval_xpath(tag, './/span[@class="font11px lightgrey block"]'))
         result['seed'] = int_or_zero(extract_text(eval_xpath(tag, './/td[contains(@class, "green")]')))
         result['leech'] = int_or_zero(extract_text(eval_xpath(tag, './/td[contains(@class, "red")]')))

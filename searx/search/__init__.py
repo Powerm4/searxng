@@ -73,9 +73,7 @@ class Search:
         Check if an answer return a result.
         If yes, update self.result_container and return True
         """
-        answerers_results = ask(self.search_query)
-
-        if answerers_results:
+        if answerers_results := ask(self.search_query):
             for results in answerers_results:
                 self.result_container.extend('answer', results)
             return True
@@ -118,13 +116,13 @@ class Search:
         if max_request_timeout is None and query_timeout is None:
             # No max, no user query: default_timeout
             pass
-        elif max_request_timeout is None and query_timeout is not None:
+        elif max_request_timeout is None:
             # No max, but user query: From user query except if above default
             actual_timeout = min(default_timeout, query_timeout)
-        elif max_request_timeout is not None and query_timeout is None:
+        elif query_timeout is None:
             # Max, no user query: Default except if above max
             actual_timeout = min(default_timeout, max_request_timeout)
-        elif max_request_timeout is not None and query_timeout is not None:
+        else:
             # Max & user query: From user query except if above max
             actual_timeout = min(query_timeout, max_request_timeout)
 

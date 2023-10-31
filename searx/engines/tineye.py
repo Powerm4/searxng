@@ -156,7 +156,7 @@ def response(resp):
     try:
         json_data = resp.json()
     except Exception as exc:  # pylint: disable=broad-except
-        msg = "can't parse JSON response // %s" % exc
+        msg = f"can't parse JSON response // {exc}"
         logger.error(msg)
         json_data = {'error': msg}
 
@@ -165,15 +165,12 @@ def response(resp):
     if resp.is_error:
         if resp.status_code in (400, 422):
 
-            message = 'HTTP status: %s' % resp.status_code
+            message = f'HTTP status: {resp.status_code}'
             error = json_data.get('error')
             s_key = json_data.get('suggestions', {}).get('key', '')
 
-            if error and s_key:
-                message = "%s (%s)" % (error, s_key)
-            elif error:
-                message = error
-
+            if error:
+                message = f"{error} ({s_key})" if s_key else error
             if s_key == "Invalid image URL":
                 # test https://docs.searxng.org/_static/searxng-wordmark.svg
                 message = FORMAT_NOT_SUPPORTED
@@ -216,10 +213,7 @@ def response(resp):
             }
         )
 
-    # append number of results
-
-    number_of_results = json_data.get('num_matches')
-    if number_of_results:
+    if number_of_results := json_data.get('num_matches'):
         results.append({'number_of_results': number_of_results})
 
     return results

@@ -72,7 +72,7 @@ ORDER by ?item
 def value_to_https_link(value):
     http = 'http://'
     if value.startswith(http):
-        value = 'https://' + value[len(http) :]
+        value = f'https://{value[len(http):]}'
     return (value, value)
 
 
@@ -208,9 +208,7 @@ def response(resp):
 
 
 def get_wikipedia_image(raw_value):
-    if not raw_value:
-        return None
-    return get_external_url('wikimedia_image', raw_value)
+    return get_external_url('wikimedia_image', raw_value) if raw_value else None
 
 
 def fetch_wikidata(nominatim_json, user_language):
@@ -229,7 +227,7 @@ def fetch_wikidata(nominatim_json, user_language):
         # ignore brand:wikidata
         wd_id = extratags.get('wikidata', extratags.get('wikidata link'))
         if wd_id and wd_id not in wikidata_ids:
-            wikidata_ids.append('wd:' + wd_id)
+            wikidata_ids.append(f'wd:{wd_id}')
             wd_to_results.setdefault(wd_id, []).append(result)
 
     if wikidata_ids:
@@ -248,10 +246,10 @@ def fetch_wikidata(nominatim_json, user_language):
                     'image_sign': get_wikipedia_image(wd_result.get('sign', {}).get('value')),
                     'image_symbol': get_wikipedia_image(wd_result.get('symbol', {}).get('value')),
                 }
-                # overwrite wikipedia link
-                wikipedia_name = wd_result.get('wikipediaName', {}).get('value')
-                if wikipedia_name:
-                    result['extratags']['wikipedia'] = user_language + ':' + wikipedia_name
+                if wikipedia_name := wd_result.get('wikipediaName', {}).get(
+                    'value'
+                ):
+                    result['extratags']['wikipedia'] = f'{user_language}:{wikipedia_name}'
                 # get website if not already defined
                 website = wd_result.get('website', {}).get('value')
                 if (
@@ -272,12 +270,7 @@ def get_title_address(result):
     address = {}
 
     # get name
-    if (
-        result['category'] == 'amenity'
-        or result['category'] == 'shop'
-        or result['category'] == 'tourism'
-        or result['category'] == 'leisure'
-    ):
+    if result['category'] in ['amenity', 'shop', 'tourism', 'leisure']:
         if address_raw.get('address29'):
             # https://github.com/osm-search/Nominatim/issues/1662
             address_name = address_raw.get('address29')
@@ -291,12 +284,15 @@ def get_title_address(result):
         title = address_name
         address.update(
             {
-                'name': address_name,
+                'name': title,
                 'house_number': address_raw.get('house_number'),
                 'road': address_raw.get('road'),
                 'locality': address_raw.get(
-                    'city', address_raw.get('town', address_raw.get('village'))  # noqa
-                ),  # noqa
+                    'city',
+                    address_raw.get(
+                        'town', address_raw.get('village')
+                    ),  # noqa
+                ),
                 'postcode': address_raw.get('postcode'),
                 'country': address_raw.get('country'),
                 'country_code': address_raw.get('country_code'),
@@ -390,8 +386,7 @@ def get_data(result, user_language, ignore_keys):
             continue
         if get_key_rank(k) is None:
             continue
-        k_label = get_key_label(k, user_language)
-        if k_label:
+        if k_label := get_key_label(k, user_language):
             data.append(
                 {
                     'label': k_label,
@@ -450,8 +445,7 @@ def get_key_label(key_name, lang):
         # https://taginfo.openstreetmap.org/keys/currency#values
         currency = key_name.split(':')
         if len(currency) > 1:
-            o = CURRENCIES['iso4217'].get(currency[1])
-            if o:
+            if o := CURRENCIES['iso4217'].get(currency[1]):
                 return get_label(o, lang).lower()
             return currency[1]
 

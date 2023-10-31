@@ -98,13 +98,14 @@ def response(resp):  # pylint: disable=too-many-branches
         content = html_to_text(ecma_unescape(photo.get('description', '')))
         img_src = None
 
-        # From the biggest to the lowest format
-        size_data = None
-        for image_size in image_sizes:
-            if image_size in photo['sizes']['data']:
-                size_data = photo['sizes']['data'][image_size]['data']
-                break
-
+        size_data = next(
+            (
+                photo['sizes']['data'][image_size]['data']
+                for image_size in image_sizes
+                if image_size in photo['sizes']['data']
+            ),
+            None,
+        )
         if not size_data:
             logger.debug('cannot find valid image size: {0}'.format(repr(photo['sizes']['data'])))
             continue
@@ -133,8 +134,8 @@ def response(resp):  # pylint: disable=too-many-branches
             'source': source,
             'img_format': img_format,
             'template': 'images.html',
+            'author': author.encode(errors='ignore').decode(),
         }
-        result['author'] = author.encode(errors='ignore').decode()
         result['source'] = source.encode(errors='ignore').decode()
         result['title'] = title.encode(errors='ignore').decode()
         result['content'] = content.encode(errors='ignore').decode()

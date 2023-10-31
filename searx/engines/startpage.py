@@ -80,6 +80,7 @@ Startpage's category (for Web-search, News, Videos, ..) is set by
 
 """
 
+
 from typing import TYPE_CHECKING
 from collections import OrderedDict
 import re
@@ -135,7 +136,7 @@ safesearch_dict = {0: '0', 1: '1', 2: '1'}
 
 # search-url
 base_url = 'https://www.startpage.com'
-search_url = base_url + '/sp/search'
+search_url = f'{base_url}/sp/search'
 
 # specific xpath variables
 # ads xpath //div[@id="results"]/div[@id="sponsored"]//div[@class="result"]
@@ -185,9 +186,7 @@ def get_sc_code(searxng_locale, params):
         logger.debug("get_sc_code: reuse '%s'", sc_code)
         return sc_code
 
-    headers = {**params['headers']}
-    headers['Origin'] = base_url
-    headers['Referer'] = base_url + '/'
+    headers = {**params['headers'], 'Origin': base_url, 'Referer': f'{base_url}/'}
     # headers['Connection'] = 'keep-alive'
     # headers['Accept-Encoding'] = 'gzip, deflate, br'
     # headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8'
@@ -201,14 +200,10 @@ def get_sc_code(searxng_locale, params):
     if send_accept_language_header:
         ac_lang = locale.language
         if locale.territory:
-            ac_lang = "%s-%s,%s;q=0.9,*;q=0.5" % (
-                locale.language,
-                locale.territory,
-                locale.language,
-            )
+            ac_lang = f"{locale.language}-{locale.territory},{locale.language};q=0.9,*;q=0.5"
         headers['Accept-Language'] = ac_lang
 
-    get_sc_url = base_url + '/?sc=%s' % (sc_code)
+    get_sc_url = f'{base_url}/?sc={sc_code}'
     logger.debug("query new sc time-stamp ... %s", get_sc_url)
     logger.debug("headers: %s", headers)
     resp = get(get_sc_url, headers=headers)
@@ -225,11 +220,11 @@ def get_sc_code(searxng_locale, params):
     dom = lxml.html.fromstring(resp.text)  # type: ignore
 
     try:
-        sc_code = eval_xpath(dom, search_form_xpath + '//input[@name="sc"]/@value')[0]
+        sc_code = eval_xpath(dom, f'{search_form_xpath}//input[@name="sc"]/@value')[0]
     except IndexError as exc:
         logger.debug("suspend startpage API --> https://github.com/searxng/searxng/pull/695")
         raise SearxEngineCaptchaException(
-            message="get_sc_code: [PR-695] query new sc time-stamp failed! (%s)" % resp.url,  # type: ignore
+            message=f"get_sc_code: [PR-695] query new sc time-stamp failed! ({resp.url})"
         ) from exc
 
     sc_code_ts = time()
@@ -289,7 +284,7 @@ def _request_cat_web(query, params):
     cookie['enable_proxy_safety_suggest'] = '1'
     cookie['enable_stay_control'] = '1'
     cookie['instant_answers'] = '1'
-    cookie['lang_homepage'] = 's/device/%s/' % lang_homepage
+    cookie['lang_homepage'] = f's/device/{lang_homepage}/'
     cookie['num_of_results'] = '10'
     cookie['suggestions'] = '1'
     cookie['wt_unit'] = 'celsius'
@@ -310,7 +305,7 @@ def _request_cat_web(query, params):
     params['method'] = 'POST'
     params['url'] = search_url
     params['headers']['Origin'] = base_url
-    params['headers']['Referer'] = base_url + '/'
+    params['headers']['Referer'] = f'{base_url}/'
     # is the Accept header needed?
     # params['headers']['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
 
@@ -359,7 +354,7 @@ def _response_cat_web(dom):
         # check if search result starts with something like: "2 Sep 2014 ... "
         if re.match(r"^([1-9]|[1-2][0-9]|3[0-1]) [A-Z][a-z]{2} [0-9]{4} \.\.\. ", content):
             date_pos = content.find('...') + 4
-            date_string = content[0 : date_pos - 5]
+            date_string = content[:date_pos - 5]
             # fix content string
             content = content[date_pos:]
 
@@ -368,10 +363,9 @@ def _response_cat_web(dom):
             except ValueError:
                 pass
 
-        # check if search result starts with something like: "5 days ago ... "
         elif re.match(r"^[0-9]+ days? ago \.\.\. ", content):
             date_pos = content.find('...') + 4
-            date_string = content[0 : date_pos - 5]
+            date_string = content[:date_pos - 5]
 
             # calculate datetime
             published_date = datetime.now() - timedelta(days=int(re.match(r'\d+', date_string).group()))  # type: ignore
@@ -406,12 +400,12 @@ def fetch_traits(engine_traits: EngineTraits):
 
     dom = lxml.html.fromstring(resp.text)  # type: ignore
 
-    # regions
-
-    sp_region_names = []
-    for option in dom.xpath('//form[@name="settings"]//select[@name="search_results_region"]/option'):
-        sp_region_names.append(option.get('value'))
-
+    sp_region_names = [
+        option.get('value')
+        for option in dom.xpath(
+            '//form[@name="settings"]//select[@name="search_results_region"]/option'
+        )
+    ]
     for eng_tag in sp_region_names:
         if eng_tag == 'all':
             continue
@@ -420,20 +414,19 @@ def fetch_traits(engine_traits: EngineTraits):
         if '-' in babel_region_tag:
             l, r = babel_region_tag.split('-')
             r = r.split('_')[-1]
-            sxng_tag = region_tag(babel.Locale.parse(l + '_' + r, sep='_'))
+            sxng_tag = region_tag(babel.Locale.parse(f'{l}_{r}', sep='_'))
 
         else:
             try:
                 sxng_tag = region_tag(babel.Locale.parse(babel_region_tag, sep='_'))
 
             except babel.UnknownLocaleError:
-                print("ERROR: can't determine babel locale of startpage's locale %s" % eng_tag)
+                print(f"ERROR: can't determine babel locale of startpage's locale {eng_tag}")
                 continue
 
-        conflict = engine_traits.regions.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.regions.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.regions[sxng_tag] = eng_tag
 
@@ -486,9 +479,8 @@ def fetch_traits(engine_traits: EngineTraits):
         if sxng_tag is None:
             sxng_tag = catalog_engine2code[name]
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.languages[sxng_tag] = eng_tag

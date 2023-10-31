@@ -80,11 +80,10 @@ embedded_url = '<{ttype} controls height="166px" ' + 'src="{url}" type="{mtype}"
 def get_time_range(time_range):
     sw = {'day': 1, 'week': 7, 'month': 30, 'year': 365}  # pylint: disable=invalid-name
 
-    offset = sw.get(time_range, 0)
-    if not offset:
+    if offset := sw.get(time_range, 0):
+        return (date.today() - timedelta(days=offset)).isoformat()
+    else:
         return ''
-
-    return (date.today() - timedelta(days=offset)).isoformat()
 
 
 # do search-request
@@ -109,8 +108,8 @@ def response(resp):
 
     for result in response_json.get('results', []):
         title = result['label']
-        url = result['url'].replace('file://' + mount_prefix, dl_prefix)
-        content = '{}'.format(result['snippet'])
+        url = result['url'].replace(f'file://{mount_prefix}', dl_prefix)
+        content = f"{result['snippet']}"
 
         # append result
         item = {'url': url, 'title': title, 'content': content, 'template': 'files.html'}

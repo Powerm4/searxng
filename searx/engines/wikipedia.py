@@ -240,7 +240,9 @@ lang_map.update(
 
 def fetch_traits(engine_traits: EngineTraits):
     fetch_wikimedia_traits(engine_traits)
-    print("WIKIPEDIA_LANGUAGES: %s" % len(engine_traits.custom['WIKIPEDIA_LANGUAGES']))
+    print(
+        f"WIKIPEDIA_LANGUAGES: {len(engine_traits.custom['WIKIPEDIA_LANGUAGES'])}"
+    )
 
 
 def fetch_wikimedia_traits(engine_traits: EngineTraits):
@@ -315,10 +317,9 @@ def fetch_wikimedia_traits(engine_traits: EngineTraits):
                 # frequently its articles are updated.
                 continue
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
 
         engine_traits.languages[sxng_tag] = eng_tag

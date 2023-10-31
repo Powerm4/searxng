@@ -67,7 +67,7 @@ def response(resp):
             created = datetime.fromtimestamp(data['created_utc'])
             content = data['selftext']
             if len(content) > 500:
-                content = content[:500] + '...'
+                content = f'{content[:500]}...'
             params['content'] = content
             params['publishedDate'] = created
             text_results.append(params)

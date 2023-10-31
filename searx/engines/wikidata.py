@@ -4,6 +4,7 @@
 from :ref:`wikipedia engine`.
 
 """
+
 # pylint: disable=missing-class-docstring
 
 from typing import TYPE_CHECKING
@@ -113,9 +114,10 @@ WHERE {
 
 # see the property "dummy value" of https://www.wikidata.org/wiki/Q2013 (Wikidata)
 # hard coded here to avoid to an additional SPARQL request when the server starts
-DUMMY_ENTITY_URLS = set(
-    "http://www.wikidata.org/entity/" + wid for wid in ("Q4115189", "Q13406268", "Q15397819", "Q17339402")
-)
+DUMMY_ENTITY_URLS = {
+    f"http://www.wikidata.org/entity/{wid}"
+    for wid in ("Q4115189", "Q13406268", "Q15397819", "Q17339402")
+}
 
 
 # https://www.w3.org/TR/sparql11-query/#rSTRING_LITERAL1
@@ -159,7 +161,10 @@ def get_label_for_entity(entity_id, language):
 def send_wikidata_query(query, method='GET'):
     if method == 'GET':
         # query will be cached by wikidata
-        http_response = get(SPARQL_ENDPOINT_URL + '?' + urlencode({'query': query}), headers=get_headers())
+        http_response = get(
+            f'{SPARQL_ENDPOINT_URL}?' + urlencode({'query': query}),
+            headers=get_headers(),
+        )
     else:
         # query won't be cached by wikidata
         http_response = post(SPARQL_ENDPOINT_URL, data={'query': query}, headers=get_headers())
@@ -223,29 +228,41 @@ def get_thumbnail(img_src):
 
     """
     logger.debug('get_thumbnail(): %s', img_src)
-    if not img_src is None and _IMG_SRC_DEFAULT_URL_PREFIX in img_src.split()[0]:
+    if (
+        img_src is not None
+        and _IMG_SRC_DEFAULT_URL_PREFIX in img_src.split()[0]
+    ):
         img_src_name = unquote(img_src.replace(_IMG_SRC_DEFAULT_URL_PREFIX, "").split("?", 1)[0].replace("%20", "_"))
         img_src_name_first = img_src_name
         img_src_name_second = img_src_name
 
         if ".svg" in img_src_name.split()[0]:
-            img_src_name_second = img_src_name + ".png"
+            img_src_name_second = f"{img_src_name}.png"
 
         img_src_size = img_src.replace(_IMG_SRC_DEFAULT_URL_PREFIX, "").split("?", 1)[1]
         img_src_size = img_src_size[img_src_size.index("=") + 1 : img_src_size.index("&")]
         img_src_name_md5 = md5(img_src_name.encode("utf-8")).hexdigest()
         img_src = (
-            _IMG_SRC_NEW_URL_PREFIX
-            + img_src_name_md5[0]
-            + "/"
-            + img_src_name_md5[0:2]
-            + "/"
-            + img_src_name_first
-            + "/"
-            + img_src_size
+            (
+                (
+                    (
+                        (
+                            (
+                                _IMG_SRC_NEW_URL_PREFIX
+                                + img_src_name_md5[0]
+                                + "/"
+                                + img_src_name_md5[:2]
+                            )
+                            + "/"
+                        )
+                        + img_src_name_first
+                    )
+                    + "/"
+                )
+                + img_src_size
+            )
             + "px-"
-            + img_src_name_second
-        )
+        ) + img_src_name_second
         logger.debug('get_thumbnail() redirected: %s', img_src)
 
     return img_src
@@ -298,8 +315,9 @@ def get_results(attribute_result, attributes, language):
                 # Should use normalized value p:P2046/psn:P2046/wikibase:quantityAmount
                 area = attribute_result.get('P2046')
                 osm_zoom = area_to_osm_zoom(area) if area else 19
-                url = attribute.get_geo_url(attribute_result, osm_zoom=osm_zoom)
-                if url:
+                if url := attribute.get_geo_url(
+                    attribute_result, osm_zoom=osm_zoom
+                ):
                     infobox_urls.append({'title': attribute.get_label(language), 'url': url, 'entity': attribute.name})
             else:
                 infobox_attributes.append(
@@ -315,7 +333,7 @@ def get_results(attribute_result, attributes, language):
     if (
         "list" in display_type
         and img_src is None
-        and len(infobox_attributes) == 0
+        and not infobox_attributes
         and len(infobox_urls) == 1
         and len(infobox_content) == 0
     ):
@@ -514,10 +532,10 @@ class WDAttribute:
         return ""
 
     def get_str(self, result, language):  # pylint: disable=unused-argument
-        return result.get(self.name + 's')
+        return result.get(f'{self.name}s')
 
     def __repr__(self):
-        return '<' + str(type(self).__name__) + ':' + self.name + '>'
+        return f'<{str(type(self).__name__)}:{self.name}>'
 
 
 class WDAmountAttribute(WDAttribute):
@@ -536,10 +554,10 @@ class WDAmountAttribute(WDAttribute):
 
     def get_str(self, result, language):
         value = result.get(self.name)
-        unit = result.get(self.name + "Unit")
+        unit = result.get(f"{self.name}Unit")
         if unit is not None:
             unit = unit.replace('http://www.wikidata.org/entity/', '')
-            return value + " " + get_label_for_entity(unit, language)
+            return f"{value} {get_label_for_entity(unit, language)}"
         return value
 
 
@@ -586,7 +604,7 @@ class WDLabelAttribute(WDAttribute):
         return "?{name} rdfs:label ?{name}Label .".replace('{name}', self.name)
 
     def get_str(self, result, language):
-        return result.get(self.name + 'Labels')
+        return result.get(f'{self.name}Labels')
 
 
 class WDURLAttribute(WDAttribute):
@@ -601,7 +619,7 @@ class WDURLAttribute(WDAttribute):
         self.kwargs = kwargs
 
     def get_str(self, result, language):
-        value = result.get(self.name + 's')
+        value = result.get(f'{self.name}s')
         if self.url_id and value is not None and value != '':
             value = value.split(',')[0]
             url_id = self.url_id
@@ -630,15 +648,13 @@ class WDGeoAttribute(WDAttribute):
         return self.get_select()
 
     def get_str(self, result, language):
-        latitude = result.get(self.name + 'Lat')
-        longitude = result.get(self.name + 'Long')
-        if latitude and longitude:
-            return latitude + ' ' + longitude
-        return None
+        latitude = result.get(f'{self.name}Lat')
+        longitude = result.get(f'{self.name}Long')
+        return f'{latitude} {longitude}' if latitude and longitude else None
 
     def get_geo_url(self, result, osm_zoom=19):
-        latitude = result.get(self.name + 'Lat')
-        longitude = result.get(self.name + 'Long')
+        latitude = result.get(f'{self.name}Lat')
+        longitude = result.get(f'{self.name}Long')
         if latitude and longitude:
             return get_earth_coordinates_url(latitude, longitude, osm_zoom)
         return None
@@ -682,9 +698,7 @@ class WDDateAttribute(WDAttribute):
         year = int(value)
         # precision: year
         if year < 1584:
-            if year < 0:
-                return str(year - 1)
-            return str(year)
+            return str(year - 1) if year < 0 else str(year)
         timestamp = isoparse(value)
         return format_date(timestamp, format='yyyy', locale=locale)
 
@@ -734,7 +748,7 @@ class WDDateAttribute(WDAttribute):
         value = result.get(self.name)
         if value == '' or value is None:
             return None
-        precision = result.get(self.name + 'timePrecision')
+        precision = result.get(f'{self.name}timePrecision')
         date_format = WDDateAttribute.DATE_FORMAT.get(precision)
         if date_format is not None:
             format_method = getattr(self, date_format[0])
@@ -742,10 +756,7 @@ class WDDateAttribute(WDAttribute):
             try:
                 if precision >= 1:
                     t = value.split('-')
-                    if value.startswith('-'):
-                        value = '-' + t[1]
-                    else:
-                        value = t[0]
+                    value = f'-{t[1]}' if value.startswith('-') else t[0]
                 return format_method(value, language)
             except Exception:  # pylint: disable=broad-except
                 return value
@@ -754,7 +765,10 @@ class WDDateAttribute(WDAttribute):
 
 def debug_explain_wikidata_query(query, method='GET'):
     if method == 'GET':
-        http_response = get(SPARQL_EXPLAIN_URL + '&' + urlencode({'query': query}), headers=get_headers())
+        http_response = get(
+            f'{SPARQL_EXPLAIN_URL}&' + urlencode({'query': query}),
+            headers=get_headers(),
+        )
     else:
         http_response = post(SPARQL_EXPLAIN_URL, data={'query': query}, headers=get_headers())
     http_response.raise_for_status()
@@ -770,7 +784,7 @@ def init(engine_settings=None):  # pylint: disable=unused-argument
     for attribute in get_attributes('en'):
         if type(attribute) in (WDAttribute, WDAmountAttribute, WDURLAttribute, WDDateAttribute, WDLabelAttribute):
             if attribute.name not in WIKIDATA_PROPERTIES:
-                wikidata_property_names.append("wd:" + attribute.name)
+                wikidata_property_names.append(f"wd:{attribute.name}")
     query = QUERY_PROPERTY_NAMES.replace('%ATTRIBUTES%', " ".join(wikidata_property_names))
     jsonresponse = send_wikidata_query(query)
     for result in jsonresponse.get('results', {}).get('bindings', {}):

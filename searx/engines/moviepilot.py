@@ -90,11 +90,7 @@ def response(resp):
 
     json_results = []
 
-    if resp.search_params['discovery']:
-        json_results = json['results']
-    else:
-        json_results = json
-
+    json_results = json['results'] if resp.search_params['discovery'] else json
     for result in json_results:
         item = {'title': result['title']}
 

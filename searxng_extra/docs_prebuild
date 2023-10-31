@@ -18,8 +18,7 @@ _doc_user = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs'
 
 def main():
     locales.locales_initialize()
-    base_url = get_setting('server.base_url', None)
-    if base_url:
+    if base_url := get_setting('server.base_url', None):
         infopageset_ctx = _instance_infosetset_ctx(base_url)
     else:
         infopageset_ctx = _offline_infosetset_ctx()
@@ -33,13 +32,13 @@ def main():
 
 class OfflinePage(InfoPage):
 
-    def get_ctx(self):  # pylint: disable=no-self-use
+    def get_ctx(self):    # pylint: disable=no-self-use
         """Jinja context to render :py:obj:`DocPage.content` for offline purpose (no
         links to SearXNG instance)"""
 
         ctx = super().get_ctx()
-        ctx['link'] = lambda name, url: '`%s`' % name
-        ctx['search'] = lambda query: '`%s`' % query
+        ctx['link'] = lambda name, url: f'`{name}`'
+        ctx['search'] = lambda query: f'`{query}`'
 
         return ctx
 

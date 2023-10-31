@@ -46,14 +46,14 @@ def request(query, params):
     sxng_lang = params['searxng_locale'].split('-')[0]
     netloc: str = traits.custom['wiki_netloc'].get(sxng_lang, main_wiki)  # type: ignore
     title: str = traits.custom['title'].get(sxng_lang, 'Special:Search')  # type: ignore
-    base_url = 'https://' + netloc + '/index.php?'
+    base_url = f'https://{netloc}/index.php?'
     offset = (params['pageno'] - 1) * 20
 
     if netloc == main_wiki:
         eng_lang: str = traits.get_language(sxng_lang, 'English')  # type: ignore
-        query += ' (' + eng_lang + ')'
+        query += f' ({eng_lang})'
     elif netloc == 'wiki.archlinuxcn.org':
-        base_url = 'https://' + netloc + '/wzh/index.php?'
+        base_url = f'https://{netloc}/wzh/index.php?'
 
     args = {
         'search': query,
@@ -75,7 +75,7 @@ def response(resp):
     # get the base URL for the language in which request was made
     sxng_lang = resp.search_params['searxng_locale'].split('-')[0]
     netloc: str = traits.custom['wiki_netloc'].get(sxng_lang, main_wiki)  # type: ignore
-    base_url = 'https://' + netloc + '/index.php?'
+    base_url = f'https://{netloc}/index.php?'
 
     for result in eval_xpath_list(dom, '//ul[@class="mw-search-results"]/li'):
         link = eval_xpath_getindex(result, './/div[@class="mw-search-result-heading"]/a', 0)
@@ -141,7 +141,7 @@ def fetch_traits(engine_traits: EngineTraits):
         if netloc != 'wiki.archlinux.org':
             title = title_map.get(sxng_tag)
             if not title:
-                print("ERROR: title tag from %s (%s) is unknown" % (netloc, sxng_tag))
+                print(f"ERROR: title tag from {netloc} ({sxng_tag}) is unknown")
                 continue
             engine_traits.custom['wiki_netloc'][sxng_tag] = netloc
             engine_traits.custom['title'][sxng_tag] = title  # type: ignore

@@ -111,8 +111,7 @@ class Network:
             return
         if isinstance(local_addresses, str):
             local_addresses = [local_addresses]
-        for address in local_addresses:
-            yield address
+        yield from local_addresses
 
     def get_ipaddress_cycle(self):
         while True:
@@ -143,9 +142,10 @@ class Network:
                 yield pattern, proxy_url
 
     def get_proxy_cycles(self):
-        proxy_settings = {}
-        for pattern, proxy_urls in self.iter_proxies():
-            proxy_settings[pattern] = cycle(proxy_urls)
+        proxy_settings = {
+            pattern: cycle(proxy_urls)
+            for pattern, proxy_urls in self.iter_proxies()
+        }
         while True:
             # pylint: disable=stop-iteration-return
             yield tuple((pattern, next(proxy_url_cycle)) for pattern, proxy_url_cycle in proxy_settings.items())
@@ -163,7 +163,6 @@ class Network:
         if proxies in Network._TOR_CHECK_RESULT:
             return Network._TOR_CHECK_RESULT[proxies]
 
-        result = True
         # ignore client._transport because it is not used with all://
         for transport in client._mounts.values():  # pylint: disable=protected-access
             if isinstance(transport, AsyncHTTPTransportNoHttp):
@@ -174,8 +173,7 @@ class Network:
                 continue
             return False
         response = await client.get("https://check.torproject.org/api/ip", timeout=60)
-        if not response.json()["IsTor"]:
-            result = False
+        result = bool(response.json()["IsTor"])
         Network._TOR_CHECK_RESULT[proxies] = result
         return result
 
@@ -250,13 +248,20 @@ class Network:
 
     def is_valid_response(self, response):
         # pylint: disable=too-many-boolean-expressions
-        if (
-            (self.retry_on_http_error is True and 400 <= response.status_code <= 599)
-            or (isinstance(self.retry_on_http_error, list) and response.status_code in self.retry_on_http_error)
-            or (isinstance(self.retry_on_http_error, int) and response.status_code == self.retry_on_http_error)
-        ):
-            return False
-        return True
+        return (
+            (
+                self.retry_on_http_error is not True
+                or not 400 <= response.status_code <= 599
+            )
+            and (
+                not isinstance(self.retry_on_http_error, list)
+                or response.status_code not in self.retry_on_http_error
+            )
+            and (
+                not isinstance(self.retry_on_http_error, int)
+                or response.status_code != self.retry_on_http_error
+            )
+        )
 
     async def call_client(self, stream, method, url, **kwargs):
         retries = self.retries
@@ -415,8 +420,7 @@ def done():
     So Network.aclose is called here using atexit.register
     """
     try:
-        loop = get_loop()
-        if loop:
+        if loop := get_loop():
             future = asyncio.run_coroutine_threadsafe(Network.aclose_all(), loop)
             # wait 3 seconds to close the HTTP clients
             future.result(3)

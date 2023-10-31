@@ -108,21 +108,21 @@ def response(resp):
             'template': 'images.html',
         }
 
-        author = item["result"].get('iptc', {}).get('creator')
-        if author:
+        if author := item["result"].get('iptc', {}).get('creator'):
             result_item['author'] = ', '.join(author)
 
-        copyright_notice = item["result"].get('iptc', {}).get('copyright_notice')
-        if copyright_notice:
-            result_item['source'] += ' | ' + copyright_notice
+        if (
+            copyright_notice := item["result"]
+            .get('iptc', {})
+            .get('copyright_notice')
+        ):
+            result_item['source'] += f' | {copyright_notice}'
 
-        freshness_date = item["result"].get("freshness_date")
-        if freshness_date:
-            result_item['source'] += ' | ' + freshness_date
+        if freshness_date := item["result"].get("freshness_date"):
+            result_item['source'] += f' | {freshness_date}'
 
-        file_size = item.get('gsa', {}).get('file_size')
-        if file_size:
-            result_item['source'] += ' (%s)' % file_size
+        if file_size := item.get('gsa', {}).get('file_size'):
+            result_item['source'] += f' ({file_size})'
 
         results.append(result_item)
 

@@ -61,7 +61,7 @@ def response(resp):
 
         url = result['display']['source']['sourceRecipeUrl']
         if 'www.yummly.com/private' in url:
-            url = base_url + '/' + result['tracking-id']
+            url = f'{base_url}/' + result['tracking-id']
 
         results.append(
             {
@@ -73,7 +73,8 @@ def response(resp):
             }
         )
 
-    for suggestion in json['relatedPhrases']['keywords']:
-        results.append({'suggestion': suggestion})
-
+    results.extend(
+        {'suggestion': suggestion}
+        for suggestion in json['relatedPhrases']['keywords']
+    )
     return results

@@ -21,10 +21,7 @@ url = "https://wttr.in/{query}?format=j1&lang={lang}"
 
 
 def get_weather_condition_key(lang):
-    if lang == "en":
-        return "weatherDesc"
-
-    return "lang_" + lang.lower()
+    return "weatherDesc" if lang == "en" else f"lang_{lang.lower()}"
 
 
 def generate_day_table(day):
@@ -43,19 +40,12 @@ def generate_day_table(day):
 def generate_condition_table(condition, lang, current=False):
     res = ""
 
-    if current:
-        key = "temp_"
-    else:
-        key = "temp"
-
+    key = "temp_" if current else "temp"
     res += (
         f"<tr><td><b>{gettext('Condition')}</b></td>"
         f"<td><b>{condition[get_weather_condition_key(lang)][0]['value']}</b></td></tr>"
     )
-    res += (
-        f"<tr><td><b>{gettext('Temperature')}</b></td>"
-        f"<td><b>{condition[key+'C']}°C / {condition[key+'F']}°F</b></td></tr>"
-    )
+    res += f"<tr><td><b>{gettext('Temperature')}</b></td><td><b>{condition[f'{key}C']}°C / {condition[f'{key}F']}°F</b></td></tr>"
     res += (
         f"<tr><td>{gettext('Feels like')}</td><td>{condition['FeelsLikeC']}°C / {condition['FeelsLikeF']}°F</td></tr>"
     )
@@ -88,8 +78,6 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
     if resp.status_code == 404:
         return []
 
@@ -126,11 +114,4 @@ def response(resp):
 
         infobox += "</tbody></table>"
 
-    results.append(
-        {
-            "infobox": title,
-            "content": infobox,
-        }
-    )
-
-    return results
+    return [{"infobox": title, "content": infobox}]

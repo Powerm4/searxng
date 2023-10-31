@@ -16,9 +16,9 @@ class SearxParameterException(SearxException):
 
     def __init__(self, name, value):
         if value == '' or value is None:
-            message = 'Empty ' + name + ' parameter'
+            message = f'Empty {name} parameter'
         else:
-            message = 'Invalid value "' + value + '" for parameter ' + name
+            message = f'Invalid value "{value}" for parameter {name}'
         super().__init__(message)
         self.message = message
         self.parameter_name = name
@@ -42,7 +42,7 @@ class SearxXPathSyntaxException(SearxEngineException):
     """Syntax error in a XPATH"""
 
     def __init__(self, xpath_spec, message):
-        super().__init__(str(xpath_spec) + " " + message)
+        super().__init__(f"{str(xpath_spec)} {message}")
         self.message = message
         # str(xpath_spec) to deal with str and XPath instance
         self.xpath_str = str(xpath_spec)
@@ -73,7 +73,7 @@ class SearxEngineAccessDeniedException(SearxEngineResponseException):
         :type message: str
         """
         suspended_time = suspended_time or self._get_default_suspended_time()
-        super().__init__(message + ', suspended_time=' + str(suspended_time))
+        super().__init__(f'{message}, suspended_time={str(suspended_time)}')
         self.suspended_time = suspended_time
         self.message = message
 
@@ -112,7 +112,7 @@ class SearxEngineXPathException(SearxEngineResponseException):
     """Error while getting the result of an XPath expression"""
 
     def __init__(self, xpath_spec, message):
-        super().__init__(str(xpath_spec) + " " + message)
+        super().__init__(f"{str(xpath_spec)} {message}")
         self.message = message
         # str(xpath_spec) to deal with str and XPath instance
         self.xpath_str = str(xpath_spec)

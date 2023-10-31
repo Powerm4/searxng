@@ -54,25 +54,26 @@ class ReverseProxyPathFix:
             self.server = base_url.netloc
 
     def __call__(self, environ, start_response):
-        script_name = self.script_name or environ.get('HTTP_X_SCRIPT_NAME', '')
-        if script_name:
+        if script_name := self.script_name or environ.get(
+            'HTTP_X_SCRIPT_NAME', ''
+        ):
             environ['SCRIPT_NAME'] = script_name
             path_info = environ['PATH_INFO']
             if path_info.startswith(script_name):
                 environ['PATH_INFO'] = path_info[len(script_name) :]
 
-        scheme = self.scheme or environ.get('HTTP_X_SCHEME', '')
-        if scheme:
+        if scheme := self.scheme or environ.get('HTTP_X_SCHEME', ''):
             environ['wsgi.url_scheme'] = scheme
 
-        server = self.server or environ.get('HTTP_X_FORWARDED_HOST', '')
-        if server:
+        if server := self.server or environ.get('HTTP_X_FORWARDED_HOST', ''):
             environ['HTTP_HOST'] = server
         return self.wsgi_app(environ, start_response)
 
 
 def patch_application(app):
     # serve pages with HTTP/1.1
-    WSGIRequestHandler.protocol_version = "HTTP/{}".format(settings['server']['http_protocol_version'])
+    WSGIRequestHandler.protocol_version = (
+        f"HTTP/{settings['server']['http_protocol_version']}"
+    )
     # patch app to handle non root url-s behind proxy & wsgi
     app.wsgi_app = ReverseProxyPathFix(ProxyFix(app.wsgi_app))

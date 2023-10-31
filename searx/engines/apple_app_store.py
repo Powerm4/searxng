@@ -27,31 +27,23 @@ search_url = 'https://itunes.apple.com/search?{query}'
 
 
 def request(query, params):
-    explicit = "Yes"
-
-    if params['safesearch'] > 0:
-        explicit = "No"
-
+    explicit = "No" if params['safesearch'] > 0 else "Yes"
     params['url'] = search_url.format(query=urlencode({'term': query, 'media': 'software', 'explicit': explicit}))
 
     return params
 
 
 def response(resp):
-    results = []
-
     json_result = loads(resp.text)
 
-    for result in json_result['results']:
-        results.append(
-            {
-                'url': result['trackViewUrl'],
-                'title': result['trackName'],
-                'content': result['description'],
-                'img_src': result['artworkUrl100'],
-                'publishedDate': parse(result['currentVersionReleaseDate']),
-                'author': result['sellerName'],
-            }
-        )
-
-    return results
+    return [
+        {
+            'url': result['trackViewUrl'],
+            'title': result['trackName'],
+            'content': result['description'],
+            'img_src': result['artworkUrl100'],
+            'publishedDate': parse(result['currentVersionReleaseDate']),
+            'author': result['sellerName'],
+        }
+        for result in json_result['results']
+    ]

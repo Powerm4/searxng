@@ -105,26 +105,30 @@ def load_engine(engine_data: dict) -> Engine | types.ModuleType | None:
         logger.error('An engine does not have a "name" field')
         return None
     if '_' in engine_name:
-        logger.error('Engine name contains underscore: "{}"'.format(engine_name))
+        logger.error(f'Engine name contains underscore: "{engine_name}"')
         return None
 
     if engine_name.lower() != engine_name:
-        logger.warning('Engine name is not lowercase: "{}", converting to lowercase'.format(engine_name))
+        logger.warning(
+            f'Engine name is not lowercase: "{engine_name}", converting to lowercase'
+        )
         engine_name = engine_name.lower()
         engine_data['name'] = engine_name
 
     # load_module
     module_name = engine_data.get('engine')
     if module_name is None:
-        logger.error('The "engine" field is missing for the engine named "{}"'.format(engine_name))
+        logger.error(
+            f'The "engine" field is missing for the engine named "{engine_name}"'
+        )
         return None
     try:
-        engine = load_module(module_name + '.py', ENGINE_DIR)
+        engine = load_module(f'{module_name}.py', ENGINE_DIR)
     except (SyntaxError, KeyboardInterrupt, SystemExit, SystemError, ImportError, RuntimeError):
-        logger.exception('Fatal exception in engine "{}"'.format(module_name))
+        logger.exception(f'Fatal exception in engine "{module_name}"')
         sys.exit(1)
     except BaseException:
-        logger.exception('Cannot load engine "{}"'.format(module_name))
+        logger.exception(f'Cannot load engine "{module_name}"')
         return None
 
     check_engine_module(engine)
@@ -146,7 +150,9 @@ def load_engine(engine_data: dict) -> Engine | types.ModuleType | None:
 
     set_loggers(engine, engine_name)
 
-    if not any(cat in settings['categories_as_tabs'] for cat in engine.categories):
+    if all(
+        cat not in settings['categories_as_tabs'] for cat in engine.categories
+    ):
         engine.categories.append(DEFAULT_CATEGORY)
 
     return engine
@@ -219,10 +225,7 @@ def is_engine_active(engine: Engine | types.ModuleType):
         return False
 
     # exclude onion engines if not using tor
-    if 'onions' in engine.categories and not using_tor_proxy(engine):
-        return False
-
-    return True
+    return bool('onions' not in engine.categories or using_tor_proxy(engine))
 
 
 def register_engine(engine: Engine | types.ModuleType):
@@ -247,7 +250,6 @@ def load_engines(engine_list):
     categories.clear()
     categories['general'] = []
     for engine_data in engine_list:
-        engine = load_engine(engine_data)
-        if engine:
+        if engine := load_engine(engine_data):
             register_engine(engine)
     return engines

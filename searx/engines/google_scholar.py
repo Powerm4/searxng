@@ -133,7 +133,7 @@ def parse_gs_a(text: Optional[str]):
     journal_year = s_text[1].split(', ')
     # journal is optional and may contains some coma
     if len(journal_year) > 1:
-        journal = ', '.join(journal_year[0:-1])
+        journal = ', '.join(journal_year[:-1])
         if journal == '…':
             journal = None
     else:
@@ -147,7 +147,7 @@ def parse_gs_a(text: Optional[str]):
     return authors, journal, publisher, publishedDate
 
 
-def response(resp):  # pylint: disable=too-many-locals
+def response(resp):    # pylint: disable=too-many-locals
     """Parse response from Google Scholar"""
     results = []
 
@@ -207,11 +207,14 @@ def response(resp):  # pylint: disable=too-many-locals
         )
 
     # parse suggestion
-    for suggestion in eval_xpath(dom, '//div[contains(@class, "gs_qsuggest_wrap")]//li//a'):
-        # append suggestion
-        results.append({'suggestion': extract_text(suggestion)})
-
-    for correction in eval_xpath(dom, '//div[@class="gs_r gs_pda"]/a'):
-        results.append({'correction': extract_text(correction)})
-
+    results.extend(
+        {'suggestion': extract_text(suggestion)}
+        for suggestion in eval_xpath(
+            dom, '//div[contains(@class, "gs_qsuggest_wrap")]//li//a'
+        )
+    )
+    results.extend(
+        {'correction': extract_text(correction)}
+        for correction in eval_xpath(dom, '//div[@class="gs_r gs_pda"]/a')
+    )
     return results

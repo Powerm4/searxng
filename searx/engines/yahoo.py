@@ -87,7 +87,7 @@ def request(query, params):
             'p': query,
             'ei': 'UTF-8',
             'fl': 1,
-            'vl': 'lang_' + lang,
+            'vl': f'lang_{lang}',
             'btf': btf,
             'fr2': 'time',
             'age': age,
@@ -96,8 +96,8 @@ def request(query, params):
         }
     )
 
-    domain = lang2domain.get(lang, '%s.search.yahoo.com' % lang)
-    params['url'] = 'https://%s/search?%s' % (domain, args)
+    domain = lang2domain.get(lang, f'{lang}.search.yahoo.com')
+    params['url'] = f'https://{domain}/search?{args}'
     return params
 
 
@@ -113,7 +113,7 @@ def parse_url(url_string):
         if endpos > -1:
             endpositions.append(endpos)
 
-    if start == 0 or len(endpositions) == 0:
+    if start == 0 or not endpositions:
         return url_string
 
     end = min(endpositions)
@@ -140,10 +140,12 @@ def response(resp):
         # append result
         results.append({'url': url, 'title': title, 'content': content})
 
-    for suggestion in eval_xpath_list(dom, '//div[contains(@class, "AlsoTry")]//table//a'):
-        # append suggestion
-        results.append({'suggestion': extract_text(suggestion)})
-
+    results.extend(
+        {'suggestion': extract_text(suggestion)}
+        for suggestion in eval_xpath_list(
+            dom, '//div[contains(@class, "AlsoTry")]//table//a'
+        )
+    )
     return results
 
 
@@ -172,12 +174,11 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = language_tag(babel.Locale.parse(eng2sxng.get(eng_tag, eng_tag)))
         except babel.UnknownLocaleError:
-            print('ERROR: unknown language --> %s' % eng_tag)
+            print(f'ERROR: unknown language --> {eng_tag}')
             continue
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.languages[sxng_tag] = eng_tag

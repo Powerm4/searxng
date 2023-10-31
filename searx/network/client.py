@@ -106,11 +106,15 @@ class AsyncProxyTransportFixed(AsyncProxyTransport):
         try:
             return await super().handle_async_request(request)
         except ProxyConnectionError as e:
-            raise httpx.ProxyError("ProxyConnectionError: " + e.strerror, request=request) from e
+            raise httpx.ProxyError(
+                f"ProxyConnectionError: {e.strerror}", request=request
+            ) from e
         except ProxyTimeoutError as e:
-            raise httpx.ProxyError("ProxyTimeoutError: " + e.args[0], request=request) from e
+            raise httpx.ProxyError(
+                f"ProxyTimeoutError: {e.args[0]}", request=request
+            ) from e
         except ProxyError as e:
-            raise httpx.ProxyError("ProxyError: " + e.args[0], request=request) from e
+            raise httpx.ProxyError(f"ProxyError: {e.args[0]}", request=request) from e
 
 
 def get_transport_for_socks_proxy(verify, http2, local_address, proxy_url, limit, retries):
@@ -121,7 +125,7 @@ def get_transport_for_socks_proxy(verify, http2, local_address, proxy_url, limit
     rdns = False
     socks5h = 'socks5h://'
     if proxy_url.startswith(socks5h):
-        proxy_url = 'socks5://' + proxy_url[len(socks5h) :]
+        proxy_url = f'socks5://{proxy_url[len(socks5h):]}'
         rdns = True
 
     proxy_type, proxy_host, proxy_port, proxy_username, proxy_password = parse_proxy_url(proxy_url)
@@ -174,27 +178,25 @@ def new_client(
         max_keepalive_connections=max_keepalive_connections,
         keepalive_expiry=keepalive_expiry,
     )
-    # See https://www.python-httpx.org/advanced/#routing
-    mounts = {}
-    for pattern, proxy_url in proxies.items():
-        if not enable_http and pattern.startswith('http://'):
-            continue
-        if proxy_url.startswith('socks4://') or proxy_url.startswith('socks5://') or proxy_url.startswith('socks5h://'):
-            mounts[pattern] = get_transport_for_socks_proxy(
-                verify, enable_http2, local_address, proxy_url, limit, retries
-            )
-        else:
-            mounts[pattern] = get_transport(verify, enable_http2, local_address, proxy_url, limit, retries)
-
+    mounts = {
+        pattern: get_transport_for_socks_proxy(
+            verify, enable_http2, local_address, proxy_url, limit, retries
+        )
+        if proxy_url.startswith('socks4://')
+        or proxy_url.startswith('socks5://')
+        or proxy_url.startswith('socks5h://')
+        else get_transport(
+            verify, enable_http2, local_address, proxy_url, limit, retries
+        )
+        for pattern, proxy_url in proxies.items()
+        if enable_http or not pattern.startswith('http://')
+    }
     if not enable_http:
         mounts['http://'] = AsyncHTTPTransportNoHttp()
 
     transport = get_transport(verify, enable_http2, local_address, None, limit, retries)
 
-    event_hooks = None
-    if hook_log_response:
-        event_hooks = {'response': [hook_log_response]}
-
+    event_hooks = {'response': [hook_log_response]} if hook_log_response else None
     return httpx.AsyncClient(
         transport=transport,
         mounts=mounts,

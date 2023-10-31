@@ -37,18 +37,14 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
     json_data = loads(resp.text)
 
-    for result in json_data['results']:
-        results.append(
-            {
-                'url': result['foreign_landing_url'],
-                'title': result['title'],
-                'img_src': result['url'],
-                'template': 'images.html',
-            }
-        )
-
-    return results
+    return [
+        {
+            'url': result['foreign_landing_url'],
+            'title': result['title'],
+            'img_src': result['url'],
+            'template': 'images.html',
+        }
+        for result in json_data['results']
+    ]

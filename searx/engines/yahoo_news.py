@@ -83,8 +83,7 @@ def response(resp):
         item = {'url': url, 'title': title, 'content': content, 'img_src': img_src}
 
         pub_date = extract_text(result.xpath('.//span[contains(@class,"s-time")]'))
-        ago = AGO_RE.search(pub_date)
-        if ago:
+        if ago := AGO_RE.search(pub_date):
             number = int(ago.group(1))
             delta = AGO_TIMEDELTA[ago.group(2)]
             pub_date = datetime.now() - delta * number
@@ -98,7 +97,10 @@ def response(resp):
             item['publishedDate'] = pub_date
         results.append(item)
 
-        for suggestion in eval_xpath_list(dom, '//div[contains(@class,"AlsoTry")]//td'):
-            results.append({'suggestion': extract_text(suggestion)})
-
+        results.extend(
+            {'suggestion': extract_text(suggestion)}
+            for suggestion in eval_xpath_list(
+                dom, '//div[contains(@class,"AlsoTry")]//td'
+            )
+        )
     return results

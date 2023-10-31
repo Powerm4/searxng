@@ -145,10 +145,7 @@ class Config:
 
     def _get_parent_dict(self, name):
         parent_name = '.'.join(name.split('.')[:-1])
-        if parent_name:
-            parent = value(parent_name, self.cfg)
-        else:
-            parent = self.cfg
+        parent = value(parent_name, self.cfg) if parent_name else self.cfg
         if (parent is UNSET) or (not isinstance(parent, dict)):
             raise KeyError(parent_name)
         return parent

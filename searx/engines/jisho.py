@@ -40,9 +40,6 @@ def response(resp):
     for page in search_results.get('data', []):
         # Entries that are purely from Wikipedia are excluded.
         parts_of_speech = page.get('senses') and page['senses'][0].get('parts_of_speech')
-        if parts_of_speech and parts_of_speech[0] == 'Wikipedia definition':
-            pass
-
         # Process alternative forms
         alt_forms = []
         for title_raw in page['japanese']:

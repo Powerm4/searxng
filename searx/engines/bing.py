@@ -104,7 +104,7 @@ def request(query, params):
     if page == 2:
         query_params['FORM'] = 'PERE'
     elif page > 2:
-        query_params['FORM'] = 'PERE%s' % (page - 2)
+        query_params['FORM'] = f'PERE{page - 2}'
 
     params['url'] = f'{base_url}?{urlencode(query_params)}'
 
@@ -214,7 +214,7 @@ def fetch_traits(engine_traits: EngineTraits):
         try:
             sxng_tag = language_tag(babel.Locale.parse(babel_lang.replace('-', '_')))
         except babel.UnknownLocaleError:
-            print("ERROR: language (%s) is unknown by babel" % (babel_lang))
+            print(f"ERROR: language ({babel_lang}) is unknown by babel")
             continue
         # Language (e.g. 'en' or 'de') from https://www.bing.com/account/general
         # is converted by bing to 'en-us' or 'de-de'.  But only if there is not
@@ -222,10 +222,9 @@ def fetch_traits(engine_traits: EngineTraits):
         # 'pt-pt' and 'pt-br' --> 'pt-br'
         bing_ui_lang = eng_lang.lower()
         if '-' not in bing_ui_lang:
-            bing_ui_lang = bing_ui_lang + '-' + bing_ui_lang_map.get(bing_ui_lang, bing_ui_lang)
+            bing_ui_lang = f'{bing_ui_lang}-{bing_ui_lang_map.get(bing_ui_lang, bing_ui_lang)}'
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != bing_ui_lang:
                 print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {bing_ui_lang}")
             continue
@@ -253,10 +252,9 @@ def fetch_traits(engine_traits: EngineTraits):
             market_code = f"{lang_tag}-{cc_tag}"  # zh-tw
 
             market_code = map_market_codes.get(market_code, market_code)
-            sxng_tag = region_tag(babel.Locale.parse('%s_%s' % (lang_tag, cc_tag.upper())))
-            conflict = engine_traits.regions.get(sxng_tag)
-            if conflict:
+            sxng_tag = region_tag(babel.Locale.parse(f'{lang_tag}_{cc_tag.upper()}'))
+            if conflict := engine_traits.regions.get(sxng_tag):
                 if conflict != market_code:
-                    print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, market_code))
+                    print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {market_code}")
                     continue
             engine_traits.regions[sxng_tag] = market_code

@@ -12,7 +12,7 @@ from searx.utils import detect_language
 # remove duplicate queries.
 # FIXME: does not fix "!music !soundcloud", because the categories are 'none' and 'music'
 def deduplicate_engineref_list(engineref_list: List[EngineRef]) -> List[EngineRef]:
-    engineref_dict = {q.category + '|' + q.name: q for q in engineref_list}
+    engineref_dict = {f'{q.category}|{q.name}': q for q in engineref_list}
     return list(engineref_dict.values())
 
 
@@ -142,9 +142,7 @@ def get_selected_categories(preferences: Preferences, form: Optional[Dict[str, s
     # (is stored in cookie)
     if not selected_categories:
         cookie_categories = preferences.get_value('categories')
-        for ccateg in cookie_categories:
-            selected_categories.append(ccateg)
-
+        selected_categories.extend(iter(cookie_categories))
     # if still no category is specified, using general
     # as default-category
     if not selected_categories:
@@ -174,12 +172,11 @@ def parse_generic(preferences: Preferences, form: Dict[str, str], disabled_engin
         # parse the form only if the categories are not locked
         for pd_name, pd in form.items():
             if pd_name == 'engines':
-                pd_engines = [
+                if pd_engines := [
                     EngineRef(engine_name, engines[engine_name].categories[0])
                     for engine_name in map(str.strip, pd.split(','))
                     if engine_name in engines
-                ]
-                if pd_engines:
+                ]:
                     query_engineref_list.extend(pd_engines)
                     explicit_engine_list = True
             else:

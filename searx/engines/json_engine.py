@@ -31,29 +31,17 @@ first_page_num = 1
 
 
 def iterate(iterable):
-    if type(iterable) == dict:
-        it = iterable.items()
-
-    else:
-        it = enumerate(iterable)
+    it = iterable.items() if type(iterable) == dict else enumerate(iterable)
     for index, value in it:
         yield str(index), value
 
 
 def is_iterable(obj):
-    if type(obj) == str:
-        return False
-    return isinstance(obj, Iterable)
+    return False if type(obj) == str else isinstance(obj, Iterable)
 
 
 def parse(query):
-    q = []
-    for part in query.split('/'):
-        if part == '':
-            continue
-        else:
-            q.append(part)
-    return q
+    return [part for part in query.split('/') if part != '']
 
 
 def do_query(data, q):
@@ -135,17 +123,22 @@ def response(resp):
                 }
             )
     else:
-        for url, title, content in zip(query(json, url_query), query(json, title_query), query(json, content_query)):
-            results.append(
-                {
-                    'url': to_string(url),
-                    'title': title_filter(to_string(title)),
-                    'content': content_filter(to_string(content)),
-                }
+        results.extend(
+            {
+                'url': to_string(url),
+                'title': title_filter(to_string(title)),
+                'content': content_filter(to_string(content)),
+            }
+            for url, title, content in zip(
+                query(json, url_query),
+                query(json, title_query),
+                query(json, content_query),
             )
-
+        )
     if not suggestion_query:
         return results
-    for suggestion in query(json, suggestion_query):
-        results.append({'suggestion': suggestion})
+    results.extend(
+        {'suggestion': suggestion}
+        for suggestion in query(json, suggestion_query)
+    )
     return results

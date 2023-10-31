@@ -49,11 +49,7 @@ def response(resp):
         title = res['name']
         url = res['html_url']
 
-        if res['description']:
-            content = res['description'][:500]
-        else:
-            content = ''
-
+        content = res['description'][:500] if res['description'] else ''
         # append result
         results.append({'url': url, 'title': title, 'content': content})
 

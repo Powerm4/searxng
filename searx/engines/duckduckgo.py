@@ -62,10 +62,9 @@ form_data = {'v': 'l', 'api': 'd.js', 'o': 'json'}
 
 def cache_vqd(query, value):
     """Caches a ``vqd`` value from a query."""
-    c = redisdb.client()
-    if c:
+    if c := redisdb.client():
         logger.debug("cache vqd value: %s", value)
-        key = 'SearXNG_ddg_vqd' + redislib.secret_hash(query)
+        key = f'SearXNG_ddg_vqd{redislib.secret_hash(query)}'
         c.set(key, value, ex=600)
 
 
@@ -106,9 +105,8 @@ def get_vqd(query):
 
     """
     value = ''
-    c = redisdb.client()
-    if c:
-        key = 'SearXNG_ddg_vqd' + redislib.secret_hash(query)
+    if c := redisdb.client():
+        key = f'SearXNG_ddg_vqd{redislib.secret_hash(query)}'
         value = c.get(key)
         if value or value == b'':
             value = value.decode('utf-8')
@@ -119,13 +117,7 @@ def get_vqd(query):
     res = get(query_url)
     doc = lxml.html.fromstring(res.text)
     value = doc.xpath("//input[@name='vqd']/@value")
-    if value:
-        value = value[0]
-    else:
-        # Some search terms do not have results and therefore no vqd value.  If
-        # no vqd value can be determined for the search term, an empty string is
-        # chached.
-        value = ''
+    value = value[0] if value else ''
     logger.debug("new vqd value: '%s'", value)
     cache_vqd(query, value)
     return value
@@ -307,7 +299,7 @@ def response(resp):
         # some locales (at least China) does not have a "next page" button and
         # the layout of the HTML tables is different.
         result_table = result_table[1]
-    elif not len(result_table) >= 3:
+    elif len(result_table) < 3:
         # no more results
         return []
     else:
@@ -412,18 +404,17 @@ def fetch_traits(engine_traits: EngineTraits):
 
         if not region:
             eng_territory, eng_lang = eng_tag.split('-')
-            region = eng_lang + '_' + eng_territory.upper()
+            region = f'{eng_lang}_{eng_territory.upper()}'
 
         try:
             sxng_tag = locales.region_tag(babel.Locale.parse(region))
         except babel.UnknownLocaleError:
-            print("ERROR: %s (%s) -> %s is unknown by babel" % (name, eng_tag, region))
+            print(f"ERROR: {name} ({eng_tag}) -> {region} is unknown by babel")
             continue
 
-        conflict = engine_traits.regions.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.regions.get(sxng_tag):
             if conflict != eng_tag:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_tag))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_tag}")
             continue
         engine_traits.regions[sxng_tag] = eng_tag
 
@@ -456,12 +447,11 @@ def fetch_traits(engine_traits: EngineTraits):
             sxng_tag = locales.language_tag(babel.Locale.parse(babel_tag))
 
         except babel.UnknownLocaleError:
-            print("ERROR: language %s (%s) is unknown by babel" % (name, eng_lang))
+            print(f"ERROR: language {name} ({eng_lang}) is unknown by babel")
             continue
 
-        conflict = engine_traits.languages.get(sxng_tag)
-        if conflict:
+        if conflict := engine_traits.languages.get(sxng_tag):
             if conflict != eng_lang:
-                print("CONFLICT: babel %s --> %s, %s" % (sxng_tag, conflict, eng_lang))
+                print(f"CONFLICT: babel {sxng_tag} --> {conflict}, {eng_lang}")
             continue
         engine_traits.languages[sxng_tag] = eng_lang

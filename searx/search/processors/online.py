@@ -68,11 +68,7 @@ class OnlineProcessor(EngineProcessor):
         if self.engine.send_accept_language_header and search_query.locale:
             ac_lang = search_query.locale.language
             if search_query.locale.territory:
-                ac_lang = "%s-%s,%s;q=0.9,*;q=0.5" % (
-                    search_query.locale.language,
-                    search_query.locale.territory,
-                    search_query.locale.language,
-                )
+                ac_lang = f"{search_query.locale.language}-{search_query.locale.territory},{search_query.locale.language};q=0.9,*;q=0.5"
             params['headers']['Accept-Language'] = ac_lang
 
         self.logger.debug('HTTP Accept-Language: %s', params['headers'].get('Accept-Language', ''))
@@ -107,11 +103,7 @@ class OnlineProcessor(EngineProcessor):
         request_args['raise_for_httperror'] = params.get('raise_for_httperror', True)
 
         # specific type of request (GET or POST)
-        if params['method'] == 'GET':
-            req = searx.network.get
-        else:
-            req = searx.network.post
-
+        req = searx.network.get if params['method'] == 'GET' else searx.network.post
         request_args['data'] = params['data']
 
         # send the request
@@ -126,7 +118,7 @@ class OnlineProcessor(EngineProcessor):
             hostname = response.url.host
             count_error(
                 self.engine_name,
-                '{} redirects, maximum: {}'.format(len(response.history), soft_max_redirects),
+                f'{len(response.history)} redirects, maximum: {soft_max_redirects}',
                 (status_code, reason, hostname),
                 secondary=True,
             )
@@ -167,7 +159,9 @@ class OnlineProcessor(EngineProcessor):
         except ssl.SSLError as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
-            self.logger.error("SSLError {}, verify={}".format(e, searx.network.get_network(self.engine_name).verify))
+            self.logger.error(
+                f"SSLError {e}, verify={searx.network.get_network(self.engine_name).verify}"
+            )
         except (httpx.TimeoutException, asyncio.TimeoutError) as e:
             # requests timeout (connect or read)
             self.handle_exception(result_container, e, suspend=True)
@@ -198,11 +192,11 @@ class OnlineProcessor(EngineProcessor):
             self.logger.exception('exception : {0}'.format(e))
 
     def get_default_tests(self):
-        tests = {}
-
-        tests['simple'] = {
-            'matrix': {'query': ('life', 'computer')},
-            'result_container': ['not_empty'],
+        tests = {
+            'simple': {
+                'matrix': {'query': ('life', 'computer')},
+                'result_container': ['not_empty'],
+            }
         }
 
         if getattr(self.engine, 'paging', False):

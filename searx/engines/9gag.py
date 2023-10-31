@@ -45,19 +45,7 @@ def response(resp):
         else:
             thumbnail = result['images']['image700']['url']
 
-        if result_type == 'Photo':
-            results.append(
-                {
-                    'template': 'images.html',
-                    'url': result['url'],
-                    'title': result['title'],
-                    'content': result['description'],
-                    'publishedDate': datetime.utcfromtimestamp(result['creationTs']),
-                    'img_src': result['images']['image700']['url'],
-                    'thumbnail_src': thumbnail,
-                }
-            )
-        elif result_type == 'Animated':
+        if result_type == 'Animated':
             results.append(
                 {
                     'template': 'videos.html',
@@ -70,8 +58,21 @@ def response(resp):
                 }
             )
 
+        elif result_type == 'Photo':
+            results.append(
+                {
+                    'template': 'images.html',
+                    'url': result['url'],
+                    'title': result['title'],
+                    'content': result['description'],
+                    'publishedDate': datetime.utcfromtimestamp(result['creationTs']),
+                    'img_src': result['images']['image700']['url'],
+                    'thumbnail_src': thumbnail,
+                }
+            )
     if 'tags' in json_results:
-        for suggestion in json_results['tags']:
-            results.append({'suggestion': suggestion['key']})
-
+        results.extend(
+            {'suggestion': suggestion['key']}
+            for suggestion in json_results['tags']
+        )
     return results

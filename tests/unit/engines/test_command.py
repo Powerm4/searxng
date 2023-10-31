@@ -215,7 +215,7 @@ commit '''
             '~',
             '/var',
         ]
-        for forbidden_path in forbidden_paths:
+        for _ in forbidden_paths:
             self.assertRaises(ValueError, ls_engine.search, '..'.encode(), {'pageno': 1})
 
     def test_enum_queries(self):

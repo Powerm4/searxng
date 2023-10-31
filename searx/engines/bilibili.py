@@ -60,9 +60,11 @@ def format_duration(duration):
     minutes, seconds = map(int, duration.split(":"))
     total_seconds = minutes * 60 + seconds
 
-    formatted_duration = str(timedelta(seconds=total_seconds))[2:] if 0 <= total_seconds < 3600 else ""
-
-    return formatted_duration
+    return (
+        str(timedelta(seconds=total_seconds))[2:]
+        if 0 <= total_seconds < 3600
+        else ""
+    )
 
 
 def response(resp):

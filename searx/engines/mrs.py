@@ -53,19 +53,15 @@ def request(query, params):
 
 
 def response(resp):
-    results = []
-
-    for result in resp.json():
-        results.append(
-            {
-                'url': matrix_url + '/#/' + result['alias'],
-                'title': result['name'],
-                'content': result['topic']
-                + f" // {result['members']} members"
-                + f" // {result['alias']}"
-                + f" // {result['server']}",
-                'thumbnail': result['avatar_url'],
-            }
-        )
-
-    return results
+    return [
+        {
+            'url': f'{matrix_url}/#/' + result['alias'],
+            'title': result['name'],
+            'content': result['topic']
+            + f" // {result['members']} members"
+            + f" // {result['alias']}"
+            + f" // {result['server']}",
+            'thumbnail': result['avatar_url'],
+        }
+        for result in resp.json()
+    ]

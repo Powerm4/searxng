@@ -21,18 +21,30 @@ logger = logger.getChild('botdetection')
 
 def dump_request(request: flask.Request):
     return (
-        request.path
-        + " || X-Forwarded-For: %s" % request.headers.get('X-Forwarded-For')
-        + " || X-Real-IP: %s" % request.headers.get('X-Real-IP')
-        + " || form: %s" % request.form
-        + " || Accept: %s" % request.headers.get('Accept')
-        + " || Accept-Language: %s" % request.headers.get('Accept-Language')
-        + " || Accept-Encoding: %s" % request.headers.get('Accept-Encoding')
-        + " || Content-Type: %s" % request.headers.get('Content-Type')
-        + " || Content-Length: %s" % request.headers.get('Content-Length')
-        + " || Connection: %s" % request.headers.get('Connection')
-        + " || User-Agent: %s" % request.headers.get('User-Agent')
-    )
+        (
+            (
+                (
+                    (
+                        (
+                            (
+                                (
+                                    f"{request.path} || X-Forwarded-For: {request.headers.get('X-Forwarded-For')}"
+                                    + f" || X-Real-IP: {request.headers.get('X-Real-IP')}"
+                                )
+                                + f" || form: {request.form}"
+                            )
+                            + f" || Accept: {request.headers.get('Accept')}"
+                        )
+                        + f" || Accept-Language: {request.headers.get('Accept-Language')}"
+                    )
+                    + f" || Accept-Encoding: {request.headers.get('Accept-Encoding')}"
+                )
+                + f" || Content-Type: {request.headers.get('Content-Type')}"
+            )
+            + f" || Content-Length: {request.headers.get('Content-Length')}"
+        )
+        + f" || Connection: {request.headers.get('Connection')}"
+    ) + f" || User-Agent: {request.headers.get('User-Agent')}"
 
 
 def too_many_requests(network: IPv4Network | IPv6Network, log_msg: str) -> werkzeug.Response | None:
@@ -53,9 +65,7 @@ def get_network(real_ip: IPv4Address | IPv6Address, cfg: config.Config) -> IPv4N
         prefix = cfg['real_ip.ipv6_prefix']
     else:
         prefix = cfg['real_ip.ipv4_prefix']
-    network = ip_network(f"{real_ip}/{prefix}", strict=False)
-    # logger.debug("get_network(): %s", network.compressed)
-    return network
+    return ip_network(f"{real_ip}/{prefix}", strict=False)
 
 
 _logged_errors = []
@@ -124,6 +134,4 @@ def get_real_ip(request: flask.Request) -> str:
     if real_ip and remote_addr and real_ip != remote_addr:
         logger.warning("IP from WSGI environment (%s) is not equal to IP from X-Real-IP (%s)", remote_addr, real_ip)
 
-    request_ip = forwarded_for or real_ip or remote_addr or '0.0.0.0'
-    # logger.debug("get_real_ip() -> %s", request_ip)
-    return request_ip
+    return forwarded_for or real_ip or remote_addr or '0.0.0.0'
