@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
-
 """Processors for engine-type: ``online``
 
 """
@@ -139,9 +137,6 @@ class OnlineProcessor(EngineProcessor):
         self.engine.request(query, params)
 
         # ignoring empty urls
-        if params['url'] is None:
-            return None
-
         if not params['url']:
             return None
 

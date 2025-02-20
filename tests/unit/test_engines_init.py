@@ -1,12 +1,11 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# pylint: disable=missing-module-docstring,disable=missing-class-docstring,invalid-name
+
 from searx import settings, engines
 from tests import SearxTestCase
 
 
 class TestEnginesInit(SearxTestCase):
-    @classmethod
-    def tearDownClass(cls):
-        settings['outgoing']['using_tor_proxy'] = False
-        settings['outgoing']['extra_proxy_timeout'] = 0
 
     def test_initialize_engines_default(self):
         engine_list = [
@@ -59,7 +58,7 @@ class TestEnginesInit(SearxTestCase):
         engine_list = [
             {'engine': 'dummy', 'shortcut': 'e1', 'categories': 'general'},
         ]
-        with self.assertLogs('searx.engines', level='ERROR') as cm:
+        with self.assertLogs('searx.engines', level='ERROR') as cm:  # pylint: disable=invalid-name
             engines.load_engines(engine_list)
             self.assertEqual(len(engines.engines), 0)
             self.assertEqual(cm.output, ['ERROR:searx.engines:An engine does not have a "name" field'])
@@ -69,7 +68,7 @@ class TestEnginesInit(SearxTestCase):
         engine_list = [
             {'name': 'engine2', 'shortcut': 'e2', 'categories': 'onions'},
         ]
-        with self.assertLogs('searx.engines', level='ERROR') as cm:
+        with self.assertLogs('searx.engines', level='ERROR') as cm:  # pylint: disable=invalid-name
             engines.load_engines(engine_list)
             self.assertEqual(len(engines.engines), 0)
             self.assertEqual(

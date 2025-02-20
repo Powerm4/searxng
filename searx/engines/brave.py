@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Brave supports the categories listed in :py:obj:`brave_category` (General,
 news, videos, images).  The support of :py:obj:`paging` and :py:obj:`time range
 <time_range_support>` is limited (see remarks).
@@ -124,7 +123,6 @@ from typing import Any, TYPE_CHECKING
 from urllib.parse import (
     urlencode,
     urlparse,
-    parse_qs,
 )
 
 from dateutil import parser
@@ -137,8 +135,10 @@ from searx.utils import (
     eval_xpath_list,
     eval_xpath_getindex,
     js_variable_to_python,
+    get_embeded_stream_url,
 )
 from searx.enginelib.traits import EngineTraits
+from searx.result_types import EngineResults
 
 if TYPE_CHECKING:
     import logging
@@ -248,22 +248,44 @@ def _extract_published_date(published_date_raw):
         return None
 
 
-def response(resp):
+def parse_data_string(resp):
+    # kit.start(app, element, {
+    #    node_ids: [0, 19],
+    #    data: [{"type":"data","data" .... ["q","goggles_id"],"route":1,"url":1}}]
+    #          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    kit_start = resp.text.index("kit.start(app,")
+    start = resp.text[kit_start:].index('data: [{"type":"data"')
+    start = kit_start + start + len('data: ')
+
+    lev = 0
+    end = start
+    inner = False
+    for c in resp.text[start:]:
+        if inner and lev == 0:
+            break
+        end += 1
+        if c == "[":
+            lev += 1
+            inner = True
+            continue
+        if c == "]":
+            lev -= 1
+
+    json_data = js_variable_to_python(resp.text[start:end])
+    return json_data
+
+
+def response(resp) -> EngineResults:
 
     if brave_category in ('search', 'goggles'):
         return _parse_search(resp)
 
-    datastr = ""
-    for line in resp.text.split("\n"):
-        if "const data = " in line:
-            datastr = line.replace("const data = ", "").strip()[:-1]
-            break
+    if brave_category in ('news'):
+        return _parse_news(resp)
 
-    json_data = js_variable_to_python(datastr)
+    json_data = parse_data_string(resp)
+    # json_data is a list and at the second position (0,1) in this list we find the "response" data we need ..
     json_resp = json_data[1]['data']['body']['response']
-
-    if brave_category == 'news':
-        return _parse_news(json_resp['news'])
 
     if brave_category == 'images':
         return _parse_images(json_resp)
@@ -273,15 +295,19 @@ def response(resp):
     raise ValueError(f"Unsupported brave category: {brave_category}")
 
 
-def _parse_search(resp):
+def _parse_search(resp) -> EngineResults:
+    result_list = EngineResults()
 
-    result_list = []
     dom = html.fromstring(resp.text)
 
+    # I doubt that Brave is still providing the "answer" class / I haven't seen
+    # answers in brave for a long time.
     answer_tag = eval_xpath_getindex(dom, '//div[@class="answer"]', 0, default=None)
     if answer_tag:
         url = eval_xpath_getindex(dom, '//div[@id="featured_snippet"]/a[@class="result-header"]/@href', 0, default=None)
-        result_list.append({'answer': extract_text(answer_tag), 'url': url})
+        answer = extract_text(answer_tag)
+        if answer is not None:
+            result_list.add(result_list.types.Answer(answer=answer, url=url))
 
     # xpath_results = '//div[contains(@class, "snippet fdb") and @data-type="web"]'
     xpath_results = '//div[contains(@class, "snippet ")]'
@@ -295,16 +321,22 @@ def _parse_search(resp):
         if url is None or title_tag is None or not urlparse(url).netloc:  # partial url likely means it's an ad
             continue
 
-        content_tag = eval_xpath_getindex(result, './/div[contains(@class, "snippet-description")]', 0, default='')
+        content: str = extract_text(
+            eval_xpath_getindex(result, './/div[contains(@class, "snippet-description")]', 0, default='')
+        )  # type: ignore
         pub_date_raw = eval_xpath(result, 'substring-before(.//div[contains(@class, "snippet-description")], "-")')
-        img_src = eval_xpath_getindex(result, './/img[contains(@class, "thumb")]/@src', 0, default='')
+        pub_date = _extract_published_date(pub_date_raw)
+        if pub_date and content.startswith(pub_date_raw):
+            content = content.lstrip(pub_date_raw).strip("- \n\t")
+
+        thumbnail = eval_xpath_getindex(result, './/img[contains(@class, "thumb")]/@src', 0, default='')
 
         item = {
             'url': url,
             'title': extract_text(title_tag),
-            'content': extract_text(content_tag),
-            'publishedDate': _extract_published_date(pub_date_raw),
-            'img_src': img_src,
+            'content': content,
+            'publishedDate': pub_date,
+            'thumbnail': thumbnail,
         }
 
         video_tag = eval_xpath_getindex(
@@ -315,7 +347,7 @@ def _parse_search(resp):
             # In my tests a video tag in the WEB search was most often not a
             # video, except the ones from youtube ..
 
-            iframe_src = _get_iframe_src(url)
+            iframe_src = get_embeded_stream_url(url)
             if iframe_src:
                 item['iframe_src'] = iframe_src
                 item['template'] = 'videos.html'
@@ -325,41 +357,45 @@ def _parse_search(resp):
                 )
                 item['publishedDate'] = _extract_published_date(pub_date_raw)
             else:
-                item['img_src'] = eval_xpath_getindex(video_tag, './/img/@src', 0, default='')
+                item['thumbnail'] = eval_xpath_getindex(video_tag, './/img/@src', 0, default='')
 
         result_list.append(item)
 
     return result_list
 
 
-def _get_iframe_src(url):
-    parsed_url = urlparse(url)
-    if parsed_url.path == '/watch' and parsed_url.query:
-        video_id = parse_qs(parsed_url.query).get('v', [])  # type: ignore
-        if video_id:
-            return 'https://www.youtube-nocookie.com/embed/' + video_id[0]  # type: ignore
-    return None
+def _parse_news(resp) -> EngineResults:
 
+    result_list = EngineResults()
+    dom = html.fromstring(resp.text)
 
-def _parse_news(json_resp):
-    result_list = []
+    for result in eval_xpath_list(dom, '//div[contains(@class, "results")]//div[@data-type="news"]'):
 
-    for result in json_resp["results"]:
+        # import pdb
+        # pdb.set_trace()
+
+        url = eval_xpath_getindex(result, './/a[contains(@class, "result-header")]/@href', 0, default=None)
+        if url is None:
+            continue
+
+        title = extract_text(eval_xpath_list(result, './/span[contains(@class, "snippet-title")]'))
+        content = extract_text(eval_xpath_list(result, './/p[contains(@class, "desc")]'))
+        thumbnail = eval_xpath_getindex(result, './/div[contains(@class, "image-wrapper")]//img/@src', 0, default='')
+
         item = {
-            'url': result['url'],
-            'title': result['title'],
-            'content': result['description'],
-            'publishedDate': _extract_published_date(result['age']),
+            "url": url,
+            "title": title,
+            "content": content,
+            "thumbnail": thumbnail,
         }
-        if result['thumbnail'] is not None:
-            item['img_src'] = result['thumbnail']['src']
+
         result_list.append(item)
 
     return result_list
 
 
-def _parse_images(json_resp):
-    result_list = []
+def _parse_images(json_resp) -> EngineResults:
+    result_list = EngineResults()
 
     for result in json_resp["results"]:
         item = {
@@ -377,8 +413,8 @@ def _parse_images(json_resp):
     return result_list
 
 
-def _parse_videos(json_resp):
-    result_list = []
+def _parse_videos(json_resp) -> EngineResults:
+    result_list = EngineResults()
 
     for result in json_resp["results"]:
 
@@ -396,7 +432,7 @@ def _parse_videos(json_resp):
         if result['thumbnail'] is not None:
             item['thumbnail'] = result['thumbnail']['src']
 
-        iframe_src = _get_iframe_src(url)
+        iframe_src = get_embeded_stream_url(url)
         if iframe_src:
             item['iframe_src'] = iframe_src
 
@@ -430,14 +466,15 @@ def fetch_traits(engine_traits: EngineTraits):
         print("ERROR: response from Brave is not OK.")
     dom = html.fromstring(resp.text)  # type: ignore
 
-    for option in dom.xpath('//div[@id="language-select"]//option'):
+    for option in dom.xpath('//section//option[@value="en-us"]/../option'):
 
         ui_lang = option.get('value')
         try:
-            if '-' in ui_lang:
+            l = babel.Locale.parse(ui_lang, sep='-')
+            if l.territory:
                 sxng_tag = region_tag(babel.Locale.parse(ui_lang, sep='-'))
             else:
-                sxng_tag = language_tag(babel.Locale.parse(ui_lang))
+                sxng_tag = language_tag(babel.Locale.parse(ui_lang, sep='-'))
 
         except babel.UnknownLocaleError:
             print("ERROR: can't determine babel locale of Brave's (UI) language %s" % ui_lang)
@@ -457,7 +494,7 @@ def fetch_traits(engine_traits: EngineTraits):
     if not resp.ok:  # type: ignore
         print("ERROR: response from Brave is not OK.")
 
-    country_js = resp.text[resp.text.index("options:{all") + len('options:') :]
+    country_js = resp.text[resp.text.index("options:{all") + len('options:') :]  # type: ignore
     country_js = country_js[: country_js.index("},k={default")]
     country_tags = js_variable_to_python(country_js)
 

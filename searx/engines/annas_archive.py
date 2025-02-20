@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """`Anna's Archive`_ is a free non-profit online shadow library metasearch
 engine providing access to a variety of book resources (also via IPFS), created
 by a team of anonymous archivists (AnnaArchivist_).
@@ -25,7 +24,7 @@ for *newest* articles and journals (PDF) / by shortcut ``!aaa <search-term>``.
   - name: annas articles
     engine: annas_archive
     shortcut: aaa
-    aa_content: 'journal_article'
+    aa_content: 'magazine'
     aa_ext: 'pdf'
     aa_sort: 'newest'
 
@@ -35,10 +34,10 @@ Implementations
 """
 
 from typing import List, Dict, Any, Optional
-from urllib.parse import quote
+from urllib.parse import urlencode
 from lxml import html
 
-from searx.utils import extract_text, eval_xpath, eval_xpath_list
+from searx.utils import extract_text, eval_xpath, eval_xpath_getindex, eval_xpath_list
 from searx.enginelib.traits import EngineTraits
 from searx.data import ENGINE_TRAITS
 
@@ -54,14 +53,14 @@ about: Dict[str, Any] = {
 
 # engine dependent config
 categories: List[str] = ["files"]
-paging: bool = False
+paging: bool = True
 
 # search-url
 base_url: str = "https://annas-archive.org"
 aa_content: str = ""
 """Anan's search form field **Content** / possible values::
 
-    journal_article, book_any, book_fiction, book_unknown, book_nonfiction,
+    book_fiction, book_unknown, book_nonfiction,
     book_comic, magazine, standards_document
 
 To not filter use an empty string (default).
@@ -100,9 +99,18 @@ def init(engine_settings=None):  # pylint: disable=unused-argument
 
 
 def request(query, params: Dict[str, Any]) -> Dict[str, Any]:
-    q = quote(query)
     lang = traits.get_language(params["language"], traits.all_locale)  # type: ignore
-    params["url"] = base_url + f"/search?lang={lang or ''}&content={aa_content}&ext={aa_ext}&sort={aa_sort}&q={q}"
+    args = {
+        'lang': lang,
+        'content': aa_content,
+        'ext': aa_ext,
+        'sort': aa_sort,
+        'q': query,
+        'page': params['pageno'],
+    }
+    # filter out None and empty values
+    filtered_args = dict((k, v) for k, v in args.items() if v)
+    params["url"] = f"{base_url}/search?{urlencode(filtered_args)}"
     return params
 
 
@@ -129,12 +137,12 @@ def response(resp) -> List[Dict[str, Optional[str]]]:
 def _get_result(item):
     return {
         'template': 'paper.html',
-        'url': base_url + item.xpath('./@href')[0],
+        'url': base_url + extract_text(eval_xpath_getindex(item, './@href', 0)),
         'title': extract_text(eval_xpath(item, './/h3/text()[1]')),
         'publisher': extract_text(eval_xpath(item, './/div[contains(@class, "text-sm")]')),
         'authors': [extract_text(eval_xpath(item, './/div[contains(@class, "italic")]'))],
         'content': extract_text(eval_xpath(item, './/div[contains(@class, "text-xs")]')),
-        'img_src': item.xpath('.//img/@src')[0],
+        'thumbnail': extract_text(eval_xpath_getindex(item, './/img/@src', 0, default=None), allow_none=True),
     }
 
 
@@ -161,7 +169,7 @@ def fetch_traits(engine_traits: EngineTraits):
     lang_map = {}
     for x in eval_xpath_list(dom, "//form//input[@name='lang']"):
         eng_lang = x.get("value")
-        if eng_lang in ('', '_empty', 'nl-BE', 'und'):
+        if eng_lang in ('', '_empty', 'nl-BE', 'und') or eng_lang.startswith('anti__'):
             continue
         try:
             locale = babel.Locale.parse(lang_map.get(eng_lang, eng_lang), sep='-')
@@ -178,10 +186,17 @@ def fetch_traits(engine_traits: EngineTraits):
         engine_traits.languages[sxng_lang] = eng_lang
 
     for x in eval_xpath_list(dom, "//form//input[@name='content']"):
-        engine_traits.custom['content'].append(x.get("value"))
+        if not x.get("value").startswith("anti__"):
+            engine_traits.custom['content'].append(x.get("value"))
 
     for x in eval_xpath_list(dom, "//form//input[@name='ext']"):
-        engine_traits.custom['ext'].append(x.get("value"))
+        if not x.get("value").startswith("anti__"):
+            engine_traits.custom['ext'].append(x.get("value"))
 
     for x in eval_xpath_list(dom, "//form//select[@name='sort']//option"):
         engine_traits.custom['sort'].append(x.get("value"))
+
+    # for better diff; sort the persistence of these traits
+    engine_traits.custom['content'].sort()
+    engine_traits.custom['ext'].sort()
+    engine_traits.custom['sort'].sort()

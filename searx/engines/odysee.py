@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Odysee_ is a decentralized video hosting platform.
 
 .. _Odysee: https://github.com/OdyseeTeam/odysee-frontend
@@ -89,7 +88,7 @@ def response(resp):
         duration = item["duration"]
 
         release_date = datetime.strptime(release_time.split("T")[0], "%Y-%m-%d")
-        formatted_date = datetime.utcfromtimestamp(release_date.timestamp())
+        formatted_date = datetime.fromtimestamp(release_date.timestamp())
 
         url = f"https://odysee.com/{name}:{claim_id}"
         iframe_url = f"https://odysee.com/$/embed/{name}:{claim_id}"

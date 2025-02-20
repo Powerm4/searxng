@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Bot protection / IP rate limitation.  The intention of rate limitation is to
 limit suspicious requests from an IP.  The motivation behind this is the fact
 that SearXNG passes through requests from bots and is thus classified as a bot
@@ -106,6 +105,7 @@ from searx import (
     redisdb,
 )
 from searx import botdetection
+from searx.extended_types import SXNG_Request, sxng_request
 from searx.botdetection import (
     config,
     http_accept,
@@ -129,9 +129,6 @@ _INSTALLED = False
 LIMITER_CFG_SCHEMA = Path(__file__).parent / "limiter.toml"
 """Base configuration (schema) of the botdetection."""
 
-LIMITER_CFG = Path('/etc/searxng/limiter.toml')
-"""Local Limiter configuration."""
-
 CFG_DEPRECATED = {
     # "dummy.old.foo": "config 'dummy.old.foo' exists only for tests.  Don't use it in your real project config."
 }
@@ -139,12 +136,16 @@ CFG_DEPRECATED = {
 
 def get_cfg() -> config.Config:
     global CFG  # pylint: disable=global-statement
+
     if CFG is None:
-        CFG = config.Config.from_toml(LIMITER_CFG_SCHEMA, LIMITER_CFG, CFG_DEPRECATED)
+        from . import settings_loader  # pylint: disable=import-outside-toplevel
+
+        cfg_file = (settings_loader.get_user_cfg_folder() or Path("/etc/searxng")) / "limiter.toml"
+        CFG = config.Config.from_toml(LIMITER_CFG_SCHEMA, cfg_file, CFG_DEPRECATED)
     return CFG
 
 
-def filter_request(request: flask.Request) -> werkzeug.Response | None:
+def filter_request(request: SXNG_Request) -> werkzeug.Response | None:
     # pylint: disable=too-many-return-statements
 
     cfg = get_cfg()
@@ -201,13 +202,13 @@ def filter_request(request: flask.Request) -> werkzeug.Response | None:
             val = func.filter_request(network, request, cfg)
             if val is not None:
                 return val
-    logger.debug(f"OK {network}: %s", dump_request(flask.request))
+    logger.debug(f"OK {network}: %s", dump_request(sxng_request))
     return None
 
 
 def pre_request():
     """See :py:obj:`flask.Flask.before_request`"""
-    return filter_request(flask.request)
+    return filter_request(sxng_request)
 
 
 def is_installed():
@@ -219,10 +220,16 @@ def initialize(app: flask.Flask, settings):
     """Install the limiter"""
     global _INSTALLED  # pylint: disable=global-statement
 
+    # even if the limiter is not activated, the botdetection must be activated
+    # (e.g. the self_info plugin uses the botdetection to get client IP)
+
+    cfg = get_cfg()
+    redis_client = redisdb.client()
+    botdetection.init(cfg, redis_client)
+
     if not (settings['server']['limiter'] or settings['server']['public_instance']):
         return
 
-    redis_client = redisdb.client()
     if not redis_client:
         logger.error(
             "The limiter requires Redis, please consult the documentation: "
@@ -234,10 +241,8 @@ def initialize(app: flask.Flask, settings):
 
     _INSTALLED = True
 
-    cfg = get_cfg()
     if settings['server']['public_instance']:
         # overwrite limiter.toml setting
         cfg.set('botdetection.ip_limit.link_token', True)
 
-    botdetection.init(cfg, redis_client)
     app.before_request(pre_request)

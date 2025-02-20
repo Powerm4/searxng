@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Installer for SearXNG package."""
 
 from setuptools import setup, find_packages
@@ -61,6 +61,7 @@ setup(
             'data/*.json',
             'data/*.txt',
             'data/*.ftz',
+            'favicons/*.toml',
             'infopage/*/*',
             'static/themes/simple/css/*',
             'static/themes/simple/css/*/*',

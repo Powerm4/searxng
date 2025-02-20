@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 # pylint: disable=invalid-name
 """9GAG (social media)"""
 
@@ -52,7 +51,7 @@ def response(resp):
                     'url': result['url'],
                     'title': result['title'],
                     'content': result['description'],
-                    'publishedDate': datetime.utcfromtimestamp(result['creationTs']),
+                    'publishedDate': datetime.fromtimestamp(result['creationTs']),
                     'img_src': result['images']['image700']['url'],
                     'thumbnail_src': thumbnail,
                 }
@@ -64,7 +63,7 @@ def response(resp):
                     'url': result['url'],
                     'title': result['title'],
                     'content': result['description'],
-                    'publishedDate': datetime.utcfromtimestamp(result['creationTs']),
+                    'publishedDate': datetime.fromtimestamp(result['creationTs']),
                     'thumbnail': thumbnail,
                     'iframe_src': result['images'].get('image460sv', {}).get('url'),
                 }

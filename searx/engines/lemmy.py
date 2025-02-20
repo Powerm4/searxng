@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """This engine uses the Lemmy API (https://lemmy.ml/api/v3/search), which is
 documented at `lemmy-js-client`_ / `Interface Search`_.  Since Lemmy is
 federated, results are from many different, independent lemmy instances, and not
@@ -92,7 +91,7 @@ def _get_communities(json):
                 'url': result['community']['actor_id'],
                 'title': result['community']['title'],
                 'content': markdown_to_text(result['community'].get('description', '')),
-                'img_src': result['community'].get('icon', result['community'].get('banner')),
+                'thumbnail': result['community'].get('icon', result['community'].get('banner')),
                 'publishedDate': datetime.strptime(counts['published'][:19], '%Y-%m-%dT%H:%M:%S'),
                 'metadata': metadata,
             }
@@ -121,9 +120,9 @@ def _get_posts(json):
     for result in json["posts"]:
         user = result['creator'].get('display_name', result['creator']['name'])
 
-        img_src = None
+        thumbnail = None
         if result['post'].get('thumbnail_url'):
-            img_src = result['post']['thumbnail_url'] + '?format=webp&thumbnail=208'
+            thumbnail = result['post']['thumbnail_url'] + '?format=webp&thumbnail=208'
 
         metadata = (
             f"&#x25B2; {result['counts']['upvotes']} &#x25BC; {result['counts']['downvotes']}"
@@ -141,7 +140,7 @@ def _get_posts(json):
                 'url': result['post']['ap_id'],
                 'title': result['post']['name'],
                 'content': content,
-                'img_src': img_src,
+                'thumbnail': thumbnail,
                 'publishedDate': datetime.strptime(result['post']['published'][:19], '%Y-%m-%dT%H:%M:%S'),
                 'metadata': metadata,
             }

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """This is the implementation of the Google Images engine using the internal
 Google API used by the Google Go Android app.
 
@@ -64,16 +63,11 @@ def request(query, params):
         'https://'
         + google_info['subdomain']
         + '/search'
-        + "?"
-        + urlencode(
-            {
-                'q': query,
-                'tbm': "isch",
-                **google_info['params'],
-                'asearch': 'isch',
-                'async': '_fmt:json,p:1,ijn:' + str(params['pageno']),
-            }
-        )
+        + '?'
+        + urlencode({'q': query, 'tbm': "isch", **google_info['params'], 'asearch': 'isch'})
+        # don't urlencode this because wildly different AND bad results
+        # pagination uses Zero-based numbering
+        + f'&async=_fmt:json,p:1,ijn:{params["pageno"] - 1}'
     )
 
     if params['time_range'] in time_range_dict:
@@ -81,9 +75,13 @@ def request(query, params):
     if params['safesearch']:
         query_url += '&' + urlencode({'safe': filter_mapping[params['safesearch']]})
     params['url'] = query_url
-
     params['cookies'] = google_info['cookies']
     params['headers'].update(google_info['headers'])
+    # this ua will allow getting ~50 results instead of 10. #1641
+    params['headers']['User-Agent'] = (
+        'NSTN/3.60.474802233.release Dalvik/2.1.0 (Linux; U; Android 12;' f' {google_info.get("country", "US")}) gzip'
+    )
+
     return params
 
 
@@ -97,7 +95,6 @@ def response(resp):
     json_data = loads(resp.text[json_start:])
 
     for item in json_data["ischj"].get("metadata", []):
-
         result_item = {
             'url': item["result"]["referrer_url"],
             'title': item["result"]["page_title"],

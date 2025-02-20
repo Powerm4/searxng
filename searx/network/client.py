@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 # pylint: disable=missing-module-docstring, global-statement
 
 import asyncio
@@ -12,16 +11,12 @@ from typing import Any, Dict
 import httpx
 from httpx_socks import AsyncProxyTransport
 from python_socks import parse_proxy_url, ProxyConnectionError, ProxyTimeoutError, ProxyError
+import uvloop
 
 from searx import logger
 
-# Optional uvloop (support Python 3.6)
-try:
-    import uvloop
-except ImportError:
-    pass
-else:
-    uvloop.install()
+
+uvloop.install()
 
 
 logger = logger.getChild('searx.network.client')

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """.. _botdetection.ip_limit:
 
 Method ``ip_limit``
@@ -46,6 +45,7 @@ from ipaddress import (
 import flask
 import werkzeug
 
+from searx.extended_types import SXNG_Request
 from searx import redisdb
 from searx.redislib import incr_sliding_window, drop_counter
 
@@ -77,11 +77,11 @@ LONG_MAX = 150
 LONG_MAX_SUSPICIOUS = 10
 """Maximum suspicious requests from one IP in the :py:obj:`LONG_WINDOW`"""
 
-API_WONDOW = 3600
+API_WINDOW = 3600
 """Time (sec) before sliding window for API requests (format != html) expires."""
 
 API_MAX = 4
-"""Maximum requests from one IP in the :py:obj:`API_WONDOW`"""
+"""Maximum requests from one IP in the :py:obj:`API_WINDOW`"""
 
 SUSPICIOUS_IP_WINDOW = 3600 * 24 * 30
 """Time (sec) before sliding window for one suspicious IP expires."""
@@ -92,7 +92,7 @@ SUSPICIOUS_IP_MAX = 3
 
 def filter_request(
     network: IPv4Network | IPv6Network,
-    request: flask.Request,
+    request: SXNG_Request,
     cfg: config.Config,
 ) -> werkzeug.Response | None:
 
@@ -104,7 +104,7 @@ def filter_request(
         return None
 
     if request.args.get('format', 'html') != 'html':
-        c = incr_sliding_window(redis_client, 'ip_limit.API_WONDOW:' + network.compressed, API_WONDOW)
+        c = incr_sliding_window(redis_client, 'ip_limit.API_WINDOW:' + network.compressed, API_WINDOW)
         if c > API_MAX:
             return too_many_requests(network, "too many request in API_WINDOW")
 
@@ -123,7 +123,9 @@ def filter_request(
         )
         if c > SUSPICIOUS_IP_MAX:
             logger.error("BLOCK: too many request from %s in SUSPICIOUS_IP_WINDOW (redirect to /)", network)
-            return flask.redirect(flask.url_for('index'), code=302)
+            response = flask.redirect(flask.url_for('index'), code=302)
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            return response
 
         c = incr_sliding_window(redis_client, 'ip_limit.BURST_WINDOW' + network.compressed, BURST_WINDOW)
         if c > BURST_MAX_SUSPICIOUS:

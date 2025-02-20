@@ -1,3 +1,8 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# pylint: disable=missing-module-docstring
+from __future__ import annotations
+
+import warnings
 import re
 from collections import defaultdict
 from operator import itemgetter
@@ -6,21 +11,20 @@ from typing import List, NamedTuple, Set
 from urllib.parse import urlparse, unquote
 
 from searx import logger
-from searx import utils
 from searx.engines import engines
 from searx.metrics import histogram_observe, counter_add, count_error
 
+from searx.result_types import Result, LegacyResult
+from searx.result_types.answer import AnswerSet, BaseAnswer
 
 CONTENT_LEN_IGNORED_CHARS_REGEX = re.compile(r'[,;:!?\./\\\\ ()-_]', re.M | re.U)
-WHITESPACE_REGEX = re.compile('( |\t|\n)+', re.M | re.U)
 
 
 # return the meaningful length of the content for a result
 def result_content_len(content):
     if isinstance(content, str):
         return len(CONTENT_LEN_IGNORED_CHARS_REGEX.sub('', content))
-    else:
-        return 0
+    return 0
 
 
 def compare_urls(url_a, url_b):
@@ -56,7 +60,7 @@ def compare_urls(url_a, url_b):
     return unquote(path_a) == unquote(path_b)
 
 
-def merge_two_infoboxes(infobox1, infobox2):
+def merge_two_infoboxes(infobox1, infobox2):  # pylint: disable=too-many-branches, too-many-statements
     # get engines weights
     if hasattr(engines[infobox1['engine']], 'weight'):
         weight1 = engines[infobox1['engine']].weight
@@ -128,25 +132,34 @@ def merge_two_infoboxes(infobox1, infobox2):
             infobox1['content'] = content2
 
 
-def result_score(result):
+def result_score(result, priority):
     weight = 1.0
 
     for result_engine in result['engines']:
-        if hasattr(engines[result_engine], 'weight'):
+        if hasattr(engines.get(result_engine), 'weight'):
             weight *= float(engines[result_engine].weight)
 
-    occurrences = len(result['positions'])
+    weight *= len(result['positions'])
+    score = 0
 
-    return sum((occurrences * weight) / position for position in result['positions'])
+    for position in result['positions']:
+        if priority == 'low':
+            continue
+        if priority == 'high':
+            score += weight
+        else:
+            score += weight / position
+
+    return score
 
 
-class Timing(NamedTuple):
+class Timing(NamedTuple):  # pylint: disable=missing-class-docstring
     engine: str
     total: float
     load: float
 
 
-class UnresponsiveEngine(NamedTuple):
+class UnresponsiveEngine(NamedTuple):  # pylint: disable=missing-class-docstring
     engine: str
     error_type: str
     suspended: bool
@@ -174,56 +187,76 @@ class ResultContainer:
 
     def __init__(self):
         super().__init__()
-        self._merged_results = []
-        self.infoboxes = []
-        self.suggestions = set()
-        self.answers = {}
+        self._merged_results: list[LegacyResult] = []
+        self.infoboxes: list[dict] = []
+        self.suggestions: set[str] = set()
+        self.answers = AnswerSet()
         self.corrections = set()
-        self._number_of_results = []
-        self.engine_data = defaultdict(dict)
-        self._closed = False
-        self.paging = False
+        self._number_of_results: list[int] = []
+        self.engine_data: dict[str, str | dict] = defaultdict(dict)
+        self._closed: bool = False
+        self.paging: bool = False
         self.unresponsive_engines: Set[UnresponsiveEngine] = set()
         self.timings: List[Timing] = []
         self.redirect_url = None
         self.on_result = lambda _: True
         self._lock = RLock()
 
-    def extend(self, engine_name, results):
+    def extend(self, engine_name: str | None, results):  # pylint: disable=too-many-branches
         if self._closed:
             return
 
         standard_result_count = 0
         error_msgs = set()
+
         for result in list(results):
-            result['engine'] = engine_name
-            if 'suggestion' in result and self.on_result(result):
-                self.suggestions.add(result['suggestion'])
-            elif 'answer' in result and self.on_result(result):
-                self.answers[result['answer']] = result
-            elif 'correction' in result and self.on_result(result):
-                self.corrections.add(result['correction'])
-            elif 'infobox' in result and self.on_result(result):
-                self._merge_infobox(result)
-            elif 'number_of_results' in result and self.on_result(result):
-                self._number_of_results.append(result['number_of_results'])
-            elif 'engine_data' in result and self.on_result(result):
-                self.engine_data[engine_name][result['key']] = result['engine_data']
-            elif 'url' in result:
-                # standard result (url, title, content)
-                if not self._is_valid_url_result(result, error_msgs):
-                    continue
-                # normalize the result
-                self._normalize_url_result(result)
-                # call on_result call searx.search.SearchWithPlugins._on_result
-                # which calls the plugins
-                if not self.on_result(result):
-                    continue
-                self.__merge_url_result(result, standard_result_count + 1)
-                standard_result_count += 1
-            elif self.on_result(result):
-                self.__merge_result_no_url(result, standard_result_count + 1)
-                standard_result_count += 1
+
+            if isinstance(result, Result):
+                result.engine = result.engine or engine_name
+                result.normalize_result_fields()
+
+                if isinstance(result, BaseAnswer) and self.on_result(result):
+                    self.answers.add(result)
+                else:
+                    # more types need to be implemented in the future ..
+                    raise NotImplementedError(f"no handler implemented to process the result of type {result}")
+
+            else:
+                result['engine'] = result.get('engine') or engine_name or ""
+                result = LegacyResult(result)  # for backward compatibility, will be romeved one day
+
+                if 'suggestion' in result and self.on_result(result):
+                    self.suggestions.add(result['suggestion'])
+                elif 'answer' in result and self.on_result(result):
+                    warnings.warn(
+                        f"answer results from engine {result.engine}"
+                        " are without typification / migrate to Answer class.",
+                        DeprecationWarning,
+                    )
+                    self.answers.add(result)
+                elif 'correction' in result and self.on_result(result):
+                    self.corrections.add(result['correction'])
+                elif 'infobox' in result and self.on_result(result):
+                    self._merge_infobox(result)
+                elif 'number_of_results' in result and self.on_result(result):
+                    self._number_of_results.append(result['number_of_results'])
+                elif 'engine_data' in result and self.on_result(result):
+                    self.engine_data[result.engine][result['key']] = result['engine_data']
+                elif result.url:
+                    # standard result (url, title, content)
+                    if not self._is_valid_url_result(result, error_msgs):
+                        continue
+                    # normalize the result
+                    result.normalize_result_fields()
+                    # call on_result call searx.search.SearchWithPlugins._on_result
+                    # which calls the plugins
+                    if not self.on_result(result):
+                        continue
+                    self.__merge_url_result(result, standard_result_count + 1)
+                    standard_result_count += 1
+                elif self.on_result(result):
+                    self.__merge_result_no_url(result, standard_result_count + 1)
+                    standard_result_count += 1
 
         if len(error_msgs) > 0:
             for msg in error_msgs:
@@ -270,27 +303,6 @@ class ResultContainer:
 
         return True
 
-    def _normalize_url_result(self, result):
-        """Return True if the result is valid"""
-        result['parsed_url'] = urlparse(result['url'])
-
-        # if the result has no scheme, use http as default
-        if not result['parsed_url'].scheme:
-            result['parsed_url'] = result['parsed_url']._replace(scheme="http")
-            result['url'] = result['parsed_url'].geturl()
-
-        # avoid duplicate content between the content and title fields
-        if result.get('content') == result.get('title'):
-            del result['content']
-
-        # make sure there is a template
-        if 'template' not in result:
-            result['template'] = 'default.html'
-
-        # strip multiple spaces and carriage returns from content
-        if result.get('content'):
-            result['content'] = WHITESPACE_REGEX.sub(' ', result['content'])
-
     def __merge_url_result(self, result, position):
         result['engines'] = set([result['engine']])
         with self._lock:
@@ -306,25 +318,30 @@ class ResultContainer:
     def __find_duplicated_http_result(self, result):
         result_template = result.get('template')
         for merged_result in self._merged_results:
-            if 'parsed_url' not in merged_result:
+            if not merged_result.get('parsed_url'):
                 continue
+
             if compare_urls(result['parsed_url'], merged_result['parsed_url']) and result_template == merged_result.get(
                 'template'
             ):
                 if result_template != 'images.html':
                     # not an image, same template, same url : it's a duplicate
                     return merged_result
-                else:
-                    # it's an image
-                    # it's a duplicate if the parsed_url, template and img_src are different
-                    if result.get('img_src', '') == merged_result.get('img_src', ''):
-                        return merged_result
+
+                # it's an image
+                # it's a duplicate if the parsed_url, template and img_src are different
+                if result.get('img_src', '') == merged_result.get('img_src', ''):
+                    return merged_result
         return None
 
     def __merge_duplicated_http_result(self, duplicated, result, position):
-        # using content with more text
+        # use content with more text
         if result_content_len(result.get('content', '')) > result_content_len(duplicated.get('content', '')):
             duplicated['content'] = result['content']
+
+        # use title with more text
+        if result_content_len(result.get('title', '')) > len(duplicated.get('title', '')):
+            duplicated['title'] = result['title']
 
         # merge all result's parameters not found in duplicate
         for key in result.keys():
@@ -337,7 +354,7 @@ class ResultContainer:
         # add engine to list of result-engines
         duplicated['engines'].add(result['engine'])
 
-        # using https if possible
+        # use https if possible
         if duplicated['parsed_url'].scheme != 'https' and result['parsed_url'].scheme == 'https':
             duplicated['url'] = result['parsed_url'].geturl()
             duplicated['parsed_url'] = result['parsed_url']
@@ -352,17 +369,15 @@ class ResultContainer:
         self._closed = True
 
         for result in self._merged_results:
-            score = result_score(result)
-            result['score'] = score
-
+            result['score'] = result_score(result, result.get('priority'))
             # removing html content and whitespace duplications
             if result.get('content'):
-                result['content'] = utils.html_to_text(result['content']).strip()
+                result['content'] = result['content'].strip()
             if result.get('title'):
-                result['title'] = ' '.join(utils.html_to_text(result['title']).strip().split())
+                result['title'] = ' '.join(result['title'].strip().split())
 
             for result_engine in result['engines']:
-                counter_add(score, 'engine', result_engine, 'score')
+                counter_add(result['score'], 'engine', result_engine, 'score')
 
         results = sorted(self._merged_results, key=itemgetter('score'), reverse=True)
 
@@ -371,11 +386,14 @@ class ResultContainer:
         categoryPositions = {}
 
         for res in results:
-            # FIXME : handle more than one category per engine
+            if not res.get('url'):
+                continue
+
+            # do we need to handle more than one category per engine?
             engine = engines[res['engine']]
             res['category'] = engine.categories[0] if len(engine.categories) > 0 else ''
 
-            # FIXME : handle more than one category per engine
+            # do we need to handle more than one category per engine?
             category = (
                 res['category']
                 + ':'
@@ -397,7 +415,7 @@ class ResultContainer:
 
                 # update every index after the current one
                 # (including the current one)
-                for k in categoryPositions:
+                for k in categoryPositions:  # pylint: disable=consider-using-dict-items
                     v = categoryPositions[k]['index']
                     if v >= index:
                         categoryPositions[k]['index'] = v + 1
@@ -428,21 +446,38 @@ class ResultContainer:
         """Returns the average of results number, returns zero if the average
         result number is smaller than the actual result count."""
 
-        resultnum_sum = sum(self._number_of_results)
-        if not resultnum_sum or not self._number_of_results:
-            return 0
+        with self._lock:
+            if not self._closed:
+                logger.error("call to ResultContainer.number_of_results before ResultContainer.close")
+                return 0
 
-        average = int(resultnum_sum / len(self._number_of_results))
-        if average < self.results_length():
-            average = 0
-        return average
+            resultnum_sum = sum(self._number_of_results)
+            if not resultnum_sum or not self._number_of_results:
+                return 0
+
+            average = int(resultnum_sum / len(self._number_of_results))
+            if average < self.results_length():
+                average = 0
+            return average
 
     def add_unresponsive_engine(self, engine_name: str, error_type: str, suspended: bool = False):
-        if engines[engine_name].display_error_messages:
-            self.unresponsive_engines.add(UnresponsiveEngine(engine_name, error_type, suspended))
+        with self._lock:
+            if self._closed:
+                logger.error("call to ResultContainer.add_unresponsive_engine after ResultContainer.close")
+                return
+            if engines[engine_name].display_error_messages:
+                self.unresponsive_engines.add(UnresponsiveEngine(engine_name, error_type, suspended))
 
     def add_timing(self, engine_name: str, engine_time: float, page_load_time: float):
-        self.timings.append(Timing(engine_name, total=engine_time, load=page_load_time))
+        with self._lock:
+            if self._closed:
+                logger.error("call to ResultContainer.add_timing after ResultContainer.close")
+                return
+            self.timings.append(Timing(engine_name, total=engine_time, load=page_load_time))
 
     def get_timings(self):
-        return self.timings
+        with self._lock:
+            if not self._closed:
+                logger.error("call to ResultContainer.get_timings before ResultContainer.close")
+                return []
+            return self.timings

@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""
- Youtube (Videos)
+"""Youtube (Videos)
+
 """
 
 from functools import reduce
 from json import loads, dumps
 from urllib.parse import quote_plus
+
+from searx.utils import extr
 
 # about
 about = {
@@ -101,7 +103,7 @@ def parse_next_page_response(response_text):
                 "key": "next_page_token",
             }
         )
-    except:
+    except:  # pylint: disable=bare-except
         pass
 
     return results
@@ -109,8 +111,8 @@ def parse_next_page_response(response_text):
 
 def parse_first_page_response(response_text):
     results = []
-    results_data = response_text[response_text.find('ytInitialData') :]
-    results_data = results_data[results_data.find('{') : results_data.find(';</script>')]
+    results_data = extr(response_text, 'ytInitialData = ', ';</script>')
+
     results_json = loads(results_data) if results_data else {}
     sections = (
         results_json.get('contents', {})
@@ -167,5 +169,4 @@ def parse_first_page_response(response_text):
 def get_text_from_json(element):
     if 'runs' in element:
         return reduce(lambda a, b: a + b.get('text', ''), element.get('runs'), '')
-    else:
-        return element.get('simpleText', '')
+    return element.get('simpleText', '')

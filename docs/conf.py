@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import  sys, os
@@ -55,7 +54,7 @@ searx.engines.load_engines(searx.settings['engines'])
 jinja_contexts = {
     'searx': {
         'engines': searx.engines.engines,
-        'plugins': searx.plugins.plugins,
+        'plugins': searx.plugins.STORAGE,
         'version': {
             'node': os.getenv('NODE_MINIMUM_VERSION')
         },
@@ -130,8 +129,9 @@ extensions = [
     'notfound.extension',  # https://github.com/readthedocs/sphinx-notfound-page
 ]
 
+# autodoc_typehints = "description"
 autodoc_default_options = {
-    'member-order': 'groupwise',
+    'member-order': 'bysource',
 }
 
 myst_enable_extensions = [

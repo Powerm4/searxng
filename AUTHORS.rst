@@ -172,3 +172,7 @@ features or generally made searx better:
 - Bernie Huang `<https://github.com/BernieHuang2008>`
 - Austin Olacsi `<https://github.com/Austin-Olacsi>`
 - @micsthepick
+- Daniel Kukula `<https://github.com/dkuku>`
+- Patrick Evans `https://github.com/holysoles`
+- Daniel Mowitz `<https://daniel.mowitz.rocks>`
+- `Bearz314 <https://github.com/bearz314>`_

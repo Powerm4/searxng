@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Bing-News: description see :py:obj:`searx.engines.bing`.
 
 .. hint::
@@ -124,14 +123,16 @@ def response(resp):
         thumbnail = None
         imagelink = eval_xpath_getindex(newsitem, './/a[@class="imagelink"]//img', 0, None)
         if imagelink is not None:
-            thumbnail = 'https://www.bing.com/' + imagelink.attrib.get('src')
+            thumbnail = imagelink.attrib.get('src')
+            if not thumbnail.startswith("https://www.bing.com"):
+                thumbnail = 'https://www.bing.com/' + thumbnail
 
         results.append(
             {
                 'url': url,
                 'title': title,
                 'content': content,
-                'img_src': thumbnail,
+                'thumbnail': thumbnail,
                 'metadata': metadata,
             }
         )

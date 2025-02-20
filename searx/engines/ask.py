@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Ask.com"""
 
 from urllib.parse import urlencode
@@ -20,6 +19,7 @@ about = {
 # Engine Configuration
 categories = ['general']
 paging = True
+max_page = 5
 
 # Base URL
 base_url = "https://www.ask.com/web"
@@ -62,11 +62,11 @@ def response(resp):
 
         results.append(
             {
-                "url": item['url'],
+                "url": item['url'].split('&ueid')[0],
                 "title": item['title'],
                 "content": item['abstract'],
                 "publishedDate": pubdate_original,
-                # "img_src": item.get('image_url') or None, # these are not thumbs / to large
+                # "thumbnail": item.get('image_url') or None, # these are not thumbs / to large
                 "metadata": ' | '.join(metadata),
             }
         )

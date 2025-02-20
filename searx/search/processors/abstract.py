@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
-
 """Abstract base classes for engine request processors.
 
 """
@@ -160,6 +158,7 @@ class EngineProcessor(ABC):
             return None
 
         params = {}
+        params["query"] = search_query.query
         params['category'] = engine_category
         params['pageno'] = search_query.pageno
         params['safesearch'] = search_query.safesearch

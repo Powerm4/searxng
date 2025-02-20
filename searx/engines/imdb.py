@@ -1,6 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
-
 """IMDB - Internet Movie Database
 
 Retrieves results from a basic search.  Advanced search options are not
@@ -92,7 +90,7 @@ def response(resp):
                 "title": title,
                 "url": href_base.format(category=categ, entry_id=entry_id),
                 "content": content,
-                "img_src": image_url,
+                "thumbnail": image_url,
             }
         )
 

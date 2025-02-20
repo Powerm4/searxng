@@ -1,4 +1,4 @@
-# -*- coding: utf-8; mode: conf -*-
+# -*- coding: utf-8; mode: conf-unix -*-
 # lint Python modules using external checkers.
 #
 # This is the main checker controlling the other ones and the reports
@@ -27,7 +27,7 @@ ignore-patterns=
 #init-hook=
 
 # Use multiple processes to speed up Pylint.
-jobs=1
+jobs=0
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
@@ -338,6 +338,7 @@ valid-metaclass-classmethod-first-arg=mcs
 
 # Maximum number of arguments for function / method
 max-args=8
+max-positional-arguments=14
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=20

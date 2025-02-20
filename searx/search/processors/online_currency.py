@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Processors for engine-type: ``online_currency``
 
 """
@@ -24,7 +23,7 @@ def name_to_iso4217(name):
     currency = CURRENCIES['names'].get(name, [name])
     if isinstance(currency, str):
         return currency
-    return currency[0]
+    return currency[-1]
 
 
 def iso4217_to_name(iso4217, language):

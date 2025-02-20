@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Startpage's language & region selectors are a mess ..
 
 .. _startpage regions:
@@ -75,23 +74,25 @@ Startpage's category (for Web-search, News, Videos, ..) is set by
 
 .. hint::
 
-   The default category is ``web`` .. and other categories than ``web`` are not
-   yet implemented.
+  Supported categories are ``web``, ``news`` and ``images``.
 
 """
+# pylint: disable=too-many-statements
+from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from collections import OrderedDict
 import re
 from unicodedata import normalize, combining
 from time import time
 from datetime import datetime, timedelta
+from json import loads
 
 import dateutil.parser
 import lxml.html
-import babel
+import babel.localedata
 
-from searx.utils import extract_text, eval_xpath, gen_useragent
+from searx.utils import extr, extract_text, eval_xpath, gen_useragent, html_to_text, humanize_bytes, remove_pua_from_str
 from searx.network import get  # see https://github.com/searxng/searxng/issues/762
 from searx.exceptions import SearxEngineCaptchaException
 from searx.locales import region_tag
@@ -142,10 +143,7 @@ search_url = base_url + '/sp/search'
 
 # specific xpath variables
 # ads xpath //div[@id="results"]/div[@id="sponsored"]//div[@class="result"]
-# not ads: div[@class="result"] are the direct childs of div[@id="results"]
-results_xpath = '//div[@class="w-gl__result__main"]'
-link_xpath = './/a[@class="w-gl__result-title result-link"]'
-content_xpath = './/p[@class="w-gl__description"]'
+# not ads: div[@class="result"] are the direct children of div[@id="results"]
 search_form_xpath = '//form[@id="search"]'
 """XPath of Startpage's origin search form
 
@@ -253,22 +251,13 @@ def request(query, params):
     Additionally the arguments form Startpage's search form needs to be set in
     HTML POST data / compare ``<input>`` elements: :py:obj:`search_form_xpath`.
     """
-    if startpage_categ == 'web':
-        return _request_cat_web(query, params)
-
-    logger.error("Startpages's category '%' is not yet implemented.", startpage_categ)
-    return params
-
-
-def _request_cat_web(query, params):
-
     engine_region = traits.get_region(params['searxng_locale'], 'en-US')
     engine_language = traits.get_language(params['searxng_locale'], 'en')
 
     # build arguments
     args = {
         'query': query,
-        'cat': 'web',
+        'cat': startpage_categ,
         't': 'device',
         'sc': get_sc_code(params['searxng_locale'], params),  # hint: this func needs HTTP headers,
         'with_date': time_range_dict.get(params['time_range'], ''),
@@ -320,76 +309,118 @@ def _request_cat_web(query, params):
     return params
 
 
-# get response from search-request
+def _parse_published_date(content: str) -> tuple[str, datetime | None]:
+    published_date = None
+
+    # check if search result starts with something like: "2 Sep 2014 ... "
+    if re.match(r"^([1-9]|[1-2][0-9]|3[0-1]) [A-Z][a-z]{2} [0-9]{4} \.\.\. ", content):
+        date_pos = content.find('...') + 4
+        date_string = content[0 : date_pos - 5]
+        # fix content string
+        content = content[date_pos:]
+
+        try:
+            published_date = dateutil.parser.parse(date_string, dayfirst=True)
+        except ValueError:
+            pass
+
+    # check if search result starts with something like: "5 days ago ... "
+    elif re.match(r"^[0-9]+ days? ago \.\.\. ", content):
+        date_pos = content.find('...') + 4
+        date_string = content[0 : date_pos - 5]
+
+        # calculate datetime
+        published_date = datetime.now() - timedelta(days=int(re.match(r'\d+', date_string).group()))  # type: ignore
+
+        # fix content string
+        content = content[date_pos:]
+
+    return content, published_date
+
+
+def _get_web_result(result):
+    content = html_to_text(result.get('description'))
+    content, publishedDate = _parse_published_date(content)
+
+    return {
+        'url': result['clickUrl'],
+        'title': html_to_text(result['title']),
+        'content': content,
+        'publishedDate': publishedDate,
+    }
+
+
+def _get_news_result(result):
+
+    title = remove_pua_from_str(html_to_text(result['title']))
+    content = remove_pua_from_str(html_to_text(result.get('description')))
+
+    publishedDate = None
+    if result.get('date'):
+        publishedDate = datetime.fromtimestamp(result['date'] / 1000)
+
+    thumbnailUrl = None
+    if result.get('thumbnailUrl'):
+        thumbnailUrl = base_url + result['thumbnailUrl']
+
+    return {
+        'url': result['clickUrl'],
+        'title': title,
+        'content': content,
+        'publishedDate': publishedDate,
+        'thumbnail': thumbnailUrl,
+    }
+
+
+def _get_image_result(result) -> dict[str, Any] | None:
+    url = result.get('altClickUrl')
+    if not url:
+        return None
+
+    thumbnailUrl = None
+    if result.get('thumbnailUrl'):
+        thumbnailUrl = base_url + result['thumbnailUrl']
+
+    resolution = None
+    if result.get('width') and result.get('height'):
+        resolution = f"{result['width']}x{result['height']}"
+
+    filesize = None
+    if result.get('filesize'):
+        size_str = ''.join(filter(str.isdigit, result['filesize']))
+        filesize = humanize_bytes(int(size_str))
+
+    return {
+        'template': 'images.html',
+        'url': url,
+        'title': html_to_text(result['title']),
+        'content': '',
+        'img_src': result.get('rawImageUrl'),
+        'thumbnail_src': thumbnailUrl,
+        'resolution': resolution,
+        'img_format': result.get('format'),
+        'filesize': filesize,
+    }
+
+
 def response(resp):
-    dom = lxml.html.fromstring(resp.text)
+    categ = startpage_categ.capitalize()
+    results_raw = '{' + extr(resp.text, f"React.createElement(UIStartpage.AppSerp{categ}, {{", '}})') + '}}'
+    results_json = loads(results_raw)
+    results_obj = results_json.get('render', {}).get('presenter', {}).get('regions', {})
 
-    if startpage_categ == 'web':
-        return _response_cat_web(dom)
-
-    logger.error("Startpages's category '%' is not yet implemented.", startpage_categ)
-    return []
-
-
-def _response_cat_web(dom):
     results = []
+    for results_categ in results_obj.get('mainline', []):
+        for item in results_categ.get('results', []):
+            if results_categ['display_type'] == 'web-google':
+                results.append(_get_web_result(item))
+            elif results_categ['display_type'] == 'news-bing':
+                results.append(_get_news_result(item))
+            elif 'images' in results_categ['display_type']:
+                item = _get_image_result(item)
+                if item:
+                    results.append(item)
 
-    # parse results
-    for result in eval_xpath(dom, results_xpath):
-        links = eval_xpath(result, link_xpath)
-        if not links:
-            continue
-        link = links[0]
-        url = link.attrib.get('href')
-
-        # block google-ad url's
-        if re.match(r"^http(s|)://(www\.)?google\.[a-z]+/aclk.*$", url):
-            continue
-
-        # block startpage search url's
-        if re.match(r"^http(s|)://(www\.)?startpage\.com/do/search\?.*$", url):
-            continue
-
-        title = extract_text(link)
-
-        if eval_xpath(result, content_xpath):
-            content: str = extract_text(eval_xpath(result, content_xpath))  # type: ignore
-        else:
-            content = ''
-
-        published_date = None
-
-        # check if search result starts with something like: "2 Sep 2014 ... "
-        if re.match(r"^([1-9]|[1-2][0-9]|3[0-1]) [A-Z][a-z]{2} [0-9]{4} \.\.\. ", content):
-            date_pos = content.find('...') + 4
-            date_string = content[0 : date_pos - 5]
-            # fix content string
-            content = content[date_pos:]
-
-            try:
-                published_date = dateutil.parser.parse(date_string, dayfirst=True)
-            except ValueError:
-                pass
-
-        # check if search result starts with something like: "5 days ago ... "
-        elif re.match(r"^[0-9]+ days? ago \.\.\. ", content):
-            date_pos = content.find('...') + 4
-            date_string = content[0 : date_pos - 5]
-
-            # calculate datetime
-            published_date = datetime.now() - timedelta(days=int(re.match(r'\d+', date_string).group()))  # type: ignore
-
-            # fix content string
-            content = content[date_pos:]
-
-        if published_date:
-            # append result
-            results.append({'url': url, 'title': title, 'content': content, 'publishedDate': published_date})
-        else:
-            # append result
-            results.append({'url': url, 'title': title, 'content': content})
-
-    # return results
     return results
 
 
@@ -446,10 +477,12 @@ def fetch_traits(engine_traits: EngineTraits):
 
     # get the native name of every language known by babel
 
-    for lang_code in filter(
-        lambda lang_code: lang_code.find('_') == -1, babel.localedata.locale_identifiers()  # type: ignore
-    ):
-        native_name = babel.Locale(lang_code).get_language_name().lower()  # type: ignore
+    for lang_code in filter(lambda lang_code: lang_code.find('_') == -1, babel.localedata.locale_identifiers()):
+        native_name = babel.Locale(lang_code).get_language_name()
+        if not native_name:
+            print(f"ERROR: language name of startpage's language {lang_code} is unknown by babel")
+            continue
+        native_name = native_name.lower()
         # add native name exactly as it is
         catalog_engine2code[native_name] = lang_code
 

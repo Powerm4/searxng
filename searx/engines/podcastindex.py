@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Podcast Index
 """
 
@@ -35,7 +34,7 @@ def response(resp):
                 'title': result['title'],
                 'content': result['description'],
                 'thumbnail': result['image'],
-                'publishedDate': datetime.utcfromtimestamp(result['newestItemPubdate']),
+                'publishedDate': datetime.fromtimestamp(result['newestItemPubdate']),
                 'metadata': f"{result['author']}, {result['episodeCount']} episodes",
             }
         )

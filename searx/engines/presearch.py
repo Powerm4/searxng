@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Presearch supports the search types listed in :py:obj:`search_type` (general,
 images, videos, news).
 
@@ -121,8 +120,7 @@ def _get_request_id(query, params):
         l = locales.get_locale(params['searxng_locale'])
 
         # Presearch narrows down the search by region.  In SearXNG when the user
-        # does not set a region (e.g. 'en-CA' / canada) we cannot hand over a
-        # region.
+        # does not set a region (e.g. 'en-CA' / canada) we cannot hand over a region.
 
         # We could possibly use searx.locales.get_official_locales to determine
         # in which regions this language is an official one, but then we still
@@ -164,7 +162,7 @@ def parse_search_query(json_results):
         result = {
             'url': item['link'],
             'title': item['title'],
-            'img_src': item['image'],
+            'thumbnail': item['image'],
             'content': '',
             'metadata': item.get('source'),
         }
@@ -246,7 +244,7 @@ def response(resp):
                     'url': item.get('link'),
                     'content': '',
                     'metadata': ' / '.join(metadata),
-                    'img_src': item.get('image'),
+                    'thumbnail': item.get('image'),
                 }
             )
 
@@ -259,7 +257,7 @@ def response(resp):
                     'url': item.get('link'),
                     'content': item.get('description', ''),
                     'metadata': ' / '.join(metadata),
-                    'img_src': item.get('image'),
+                    'thumbnail': item.get('image'),
                 }
             )
 

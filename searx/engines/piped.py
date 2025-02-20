@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """An alternative privacy-friendly YouTube frontend which is efficient by
 design.  `Piped’s architecture`_ consists of 3 components:
 
@@ -53,6 +52,8 @@ import random
 from urllib.parse import urlencode
 import datetime
 from dateutil import parser
+
+from searx.utils import humanize_number
 
 # about
 about = {
@@ -139,6 +140,7 @@ def response(resp):
             "title": result.get("title", ""),
             "publishedDate": parser.parse(time.ctime(uploaded / 1000)) if uploaded != -1 else None,
             "iframe_src": _frontend_url() + '/embed' + result.get("url", ""),
+            "views": humanize_number(result["views"]),
         }
         length = result.get("duration")
         if length:
@@ -152,7 +154,7 @@ def response(resp):
 
         elif piped_filter == 'music_songs':
             item["template"] = "default.html"
-            item["img_src"] = result.get("thumbnail", "")
+            item["thumbnail"] = result.get("thumbnail", "")
             item["content"] = result.get("uploaderName", "") or ""
 
         results.append(item)

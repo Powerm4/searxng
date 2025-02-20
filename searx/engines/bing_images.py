@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Bing-Images: description see :py:obj:`searx.engines.bing`.
 """
 # pylint: disable=invalid-name
@@ -100,7 +99,7 @@ def response(resp):
                 'url': metadata['purl'],
                 'thumbnail_src': metadata['turl'],
                 'img_src': metadata['murl'],
-                'content': metadata['desc'],
+                'content': metadata.get('desc'),
                 'title': title,
                 'source': source,
                 'resolution': img_format[0],

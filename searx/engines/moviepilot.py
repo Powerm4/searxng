@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Moviepilot is a German movie database, similar to IMDB or TMDB.  It doesn't
 have any official API, but it uses JSON requests internally to fetch search
 results and suggestions, that's being used in this implementation.
@@ -105,11 +104,11 @@ def response(resp):
             item['metadata'] = html_to_text(result.get('meta_short', ''))
 
             if result.get('image'):
-                item['img_src'] = image_url.format(image_id=result['image'], filename=result['image_filename'])
+                item['thumbnail'] = image_url.format(image_id=result['image'], filename=result['image_filename'])
         else:
             item['url'] = result['url']
             item['content'] = ', '.join([result['class'], result['info'], result['more']])
-            item['img_src'] = result['image']
+            item['thumbnail'] = result['image']
 
         results.append(item)
 

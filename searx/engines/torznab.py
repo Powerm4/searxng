@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Torznab_ is an API specification that provides a standardized way to query
 torrent site for content. It is used by a number of torrent applications,
 including Prowlarr_ and Jackett_.
@@ -57,6 +56,7 @@ from urllib.parse import quote
 from lxml import etree  # type: ignore
 
 from searx.exceptions import SearxEngineAPIException
+from searx.utils import humanize_bytes
 
 if TYPE_CHECKING:
     import httpx
@@ -138,11 +138,9 @@ def build_result(item: etree.Element) -> Dict[str, Any]:
     if enclosure is not None:
         enclosure_url = enclosure.get('url')
 
-    size = get_attribute(item, 'size')
-    if not size and enclosure:
-        size = enclosure.get('length')
-    if size:
-        size = int(size)
+    filesize = get_attribute(item, 'size')
+    if not filesize and enclosure:
+        filesize = enclosure.get('length')
 
     guid = get_attribute(item, 'guid')
     comments = get_attribute(item, 'comments')
@@ -155,7 +153,7 @@ def build_result(item: etree.Element) -> Dict[str, Any]:
     result: Dict[str, Any] = {
         'template': 'torrent.html',
         'title': get_attribute(item, 'title'),
-        'filesize': size,
+        'filesize': humanize_bytes(int(filesize)) if filesize else None,
         'files': get_attribute(item, 'files'),
         'seed': seeders,
         'leech': _map_leechers(leechers, seeders, peers),
