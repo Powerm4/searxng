@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """.. sidebar:: info
 
    - `Recoll <https://www.lesbonscomptes.com/recoll/>`_
@@ -134,7 +133,7 @@ def response(resp):
                 )
 
             if mtype in ['image'] and subtype in ['bmp', 'gif', 'jpeg', 'png']:
-                item['img_src'] = url
+                item['thumbnail'] = url
 
         results.append(item)
 

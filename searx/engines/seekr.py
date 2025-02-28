@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """seekr.com Seeker Score
 
 Seekr is a privately held search and content evaluation engine that prioritizes
@@ -14,7 +13,7 @@ The engine has the following additional settings:
 - :py:obj:`api_key`
 
 This implementation is used by seekr engines in the :ref:`settings.yml
-<settings engine>`:
+<settings engines>`:
 
 .. code:: yaml
 

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Bilibili is a Chinese video sharing website.
 
 .. _Bilibili: https://www.bilibili.com
@@ -9,6 +8,8 @@ import random
 import string
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
+
+from searx import utils
 
 # Engine metadata
 about = {
@@ -57,6 +58,8 @@ def request(query, params):
 
 # Format the video duration
 def format_duration(duration):
+    if not ":" in duration:
+        return None
     minutes, seconds = map(int, duration.split(":"))
     total_seconds = minutes * 60 + seconds
 
@@ -71,7 +74,7 @@ def response(resp):
     results = []
 
     for item in search_res.get("data", {}).get("result", []):
-        title = item["title"]
+        title = utils.html_to_text(item["title"])
         url = item["arcurl"]
         thumbnail = item["pic"]
         description = item["description"]
@@ -79,7 +82,7 @@ def response(resp):
         video_id = item["aid"]
         unix_date = item["pubdate"]
 
-        formatted_date = datetime.utcfromtimestamp(unix_date)
+        formatted_date = datetime.fromtimestamp(unix_date)
         formatted_duration = format_duration(item["duration"])
         iframe_url = f"https://player.bilibili.com/player.html?aid={video_id}&high_quality=1&autoplay=false&danmaku=0"
 

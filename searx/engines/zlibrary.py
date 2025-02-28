@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """`Z-Library`_ (abbreviated as z-lib, formerly BookFinder) is a shadow library
 project for file-sharing access to scholarly journal articles, academic texts
 and general-interest books.  It began as a mirror of Library Genesis, from which
@@ -44,6 +43,7 @@ from flask_babel import gettext
 from searx.utils import extract_text, eval_xpath, eval_xpath_list
 from searx.enginelib.traits import EngineTraits
 from searx.data import ENGINE_TRAITS
+from searx.exceptions import SearxException
 
 if TYPE_CHECKING:
     import httpx
@@ -109,12 +109,20 @@ def request(query: str, params: Dict[str, Any]) -> Dict[str, Any]:
         zlib_year_to=zlib_year_to,
         zlib_ext=zlib_ext,
     )
+    params["verify"] = False
     return params
+
+
+def domain_is_seized(dom):
+    return bool(dom.xpath('//title') and "seized" in dom.xpath('//title')[0].text.lower())
 
 
 def response(resp: httpx.Response) -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     dom = html.fromstring(resp.text)
+
+    if domain_is_seized(dom):
+        raise SearxException(f"zlibrary domain is seized: {base_url}")
 
     for item in dom.xpath('//div[@id="searchResultBox"]//div[contains(@class, "resItemBox")]'):
         results.append(_parse_result(item))
@@ -142,8 +150,11 @@ def _parse_result(item) -> Dict[str, Any]:
         "authors": [extract_text(author) for author in author_elements],
         "publisher": _text(item, './/a[@title="Publisher"]'),
         "type": _text(item, './/div[contains(@class, "property__file")]//div[contains(@class, "property_value")]'),
-        "img_src": _text(item, './/img[contains(@class, "cover")]/@data-src'),
     }
+
+    thumbnail = _text(item, './/img[contains(@class, "cover")]/@data-src')
+    if not thumbnail.startswith('/'):
+        result["thumbnail"] = thumbnail
 
     year = _text(item, './/div[contains(@class, "property_year")]//div[contains(@class, "property_value")]')
     if year:
@@ -166,21 +177,39 @@ def _parse_result(item) -> Dict[str, Any]:
 
 def fetch_traits(engine_traits: EngineTraits) -> None:
     """Fetch languages and other search arguments from zlibrary's search form."""
-    # pylint: disable=import-outside-toplevel
+    # pylint: disable=import-outside-toplevel, too-many-branches
 
     import babel
     from searx.network import get  # see https://github.com/searxng/searxng/issues/762
     from searx.locales import language_tag
 
+    def _use_old_values():
+        # don't change anything, re-use the existing values
+        engine_traits.all_locale = ENGINE_TRAITS["z-library"]["all_locale"]
+        engine_traits.custom = ENGINE_TRAITS["z-library"]["custom"]
+        engine_traits.languages = ENGINE_TRAITS["z-library"]["languages"]
+
+    try:
+        resp = get(base_url, verify=False)
+    except SearxException as exc:
+        print(f"ERROR: zlibrary domain '{base_url}' is seized?")
+        print(f"  --> {exc}")
+        _use_old_values()
+        return
+
+    if not resp.ok:  # type: ignore
+        raise RuntimeError("Response from zlibrary's search page is not OK.")
+    dom = html.fromstring(resp.text)  # type: ignore
+
+    if domain_is_seized(dom):
+        print(f"ERROR: zlibrary domain is seized: {base_url}")
+        _use_old_values()
+        return
+
     engine_traits.all_locale = ""
     engine_traits.custom["ext"] = []
     engine_traits.custom["year_from"] = []
     engine_traits.custom["year_to"] = []
-
-    resp = get(base_url)
-    if not resp.ok:  # type: ignore
-        raise RuntimeError("Response from zlibrary's search page is not OK.")
-    dom = html.fromstring(resp.text)  # type: ignore
 
     for year in eval_xpath_list(dom, "//div[@id='advSearch-noJS']//select[@id='sf_yearFrom']/option"):
         engine_traits.custom["year_from"].append(year.get("value"))

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Wallhaven_ is a site created by and for people who like wallpapers.
 
 .. _Wallhaven: https://wallhaven.cc/about#Copyright
@@ -58,7 +57,7 @@ def request(query, params):
     }
 
     if api_key:
-        params['api_key'] = api_key
+        params['headers']['X-API-Key'] = api_key
 
     params['url'] = f"{base_url}/api/v1/search?{urlencode(args)}"
     return params

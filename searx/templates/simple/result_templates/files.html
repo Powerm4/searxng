@@ -6,8 +6,8 @@
 
 {%- if result.embedded -%}
     <small> &bull; <a class="text-info btn-collapse collapsed cursor-pointer media-loader disabled_if_nojs" data-toggle="collapse" data-target="#result-media-{{ index }}" data-btn-text-collapsed="{{ _('show media') }}" data-btn-text-not-collapsed="{{ _('hide media') }}">
-    {%- if result.mtype == 'audio' %}{{ icon_small('musical-notes-outline') -}}
-    {%- elif result.mtype == 'video' %} {{ icon_small('play-outline') -}}
+    {%- if result.mtype == 'audio' %}{{ icon_small('musical-notes') -}}
+    {%- elif result.mtype == 'video' %} {{ icon_small('play') -}}
     {%- endif %} {{ _('show media') }}</a></small>
 {%- endif -%}
 
@@ -35,14 +35,7 @@
 
 {%- if result.filename %}<tr><td>{{ _('Filename') }}</td><td>{{ result.filename|safe }}</td></tr>{% endif -%}
 
-{%- if result.size %}<tr><td>{{ _('Filesize') }}</td><td>
-        {%- if result.size < 1024 %}{{ result.size }} {{ _('Bytes') -}}
-        {%- elif result.size < 1024*1024 %}{{ '{0:0.2f}'.format(result.size/1024) }} {{ _('kiB') -}}
-        {%- elif result.size < 1024*1024*1024 %}{{ '{0:0.2f}'.format(result.size/1024/1024) }} {{ _('MiB') -}}
-        {%- elif result.size < 1024*1024*1024*1024 %}{{ '{0:0.2f}'.format(result.size/1024/1024/1024) }} {{ _('GiB') -}}
-        {%- else %}{{ '{0:0.2f}'.format(result.size/1024/1024/1024/1024) }} {{ _('TiB') }}{% endif -%}
-    </td></tr>
-{%- endif -%}
+{%- if result.size %}<tr><td>{{ _('Filesize') }}</td><td>{{ result.size|safe }}</td></tr>{%- endif -%}
 
 {%- if result.time %}<tr><td>{{ _('Date') }}</td><td>{{ result.time|safe }}</td></tr>{% endif -%}
 

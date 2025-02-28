@@ -6,9 +6,9 @@
 {%- endmacro -%}
 
 {%- macro tab_header(name, id, label, checked) -%}
-<input type="radio" name="{{ name }}" id="tab-{{ id }}" {% if checked is sameas true %}checked="checked"{% endif %} />
+<input type="radio" name="{{ name }}" id="tab-{{ id }}" {% if checked is sameas true %}checked="checked"{% endif %}>
 <label id="tab-label-{{ id }}" for="tab-{{ id }}" role="tab" aria-controls="tab-content-{{ id }}">{{ label }}</label>
-<section id="tab-content-{{ id }}" role="tabpanel" aria-labelledby="tab-label-{{ id }}" aria-hidden="false">
+<section id="tab-content-{{ id }}" role="tabpanel" aria-hidden="false">
 {%- endmacro -%}
 
 {%- macro tab_footer() -%}
@@ -21,35 +21,35 @@
 
 {%- macro checkbox(name, checked, disabled) -%}
   {%- if checked == '?' -%}
-    {{- icon_small('warning') -}}
+    {{- icon_small('alert') -}}
   {%- else -%}
-    <input type="checkbox" {%- if name %} name="{{ name }}" {%- endif %} value="None" {%- if checked %} checked {%- endif -%}{%- if disabled %} disabled {%- endif -%}/>
+    <input type="checkbox" {%- if name %} name="{{ name }}" {%- endif %} value="None" {%- if checked %} checked {%- endif -%}{%- if disabled %} disabled {%- endif -%}>
   {%- endif -%}
 {%- endmacro -%}
 
-{%- macro checkbox_onoff_reversed(name, checked) -%}
+{%- macro checkbox_onoff_reversed(name, checked, labelledby) -%}
   <input type="checkbox" {{- ' ' -}}
          name="{{ name }}" {{- ' ' -}}
          id="{{ name }}" {{- ' ' -}}
-         aria-labelledby="pref_{{ name }}"{{- ' ' -}}
+         {%- if labelledby -%} aria-labelledby="{{ labelledby }}"{{- ' ' -}}{%- endif -%}
          class="checkbox-onoff reversed-checkbox"{{- ' ' -}}
-         {%- if checked -%} checked{%- endif -%}/>
+         {%- if checked -%} checked{%- endif -%}>
 {%- endmacro -%}
 
 {%- macro plugin_preferences(section) -%}
-{%- for plugin in plugins -%}
-{%- if plugin.preference_section == section -%}
-<fieldset>{{- '' -}}
-    <legend>{{ _(plugin.name) }}</legend>{{- '' -}}
-    <div class="value">
-      {{- checkbox_onoff_reversed('plugin_' + plugin.id, plugin.id not in allowed_plugins) -}}
-    </div>{{- '' -}}
-    <div class="description">
-      {{- _(plugin.description) -}}
-    </div>{{- '' -}}
-</fieldset>
-{%- endif -%}
-{%- endfor -%}
+  {%- for plugin in plugins_storage -%}
+    {%- if plugin.preference_section == section -%}
+      <fieldset>{{- '' -}}
+	<legend>{{ _(plugin.name) }}</legend>{{- '' -}}
+	<div class="value">
+	  {{- checkbox_onoff_reversed('plugin_' + plugin.id, plugin.id not in allowed_plugins, 'plugin_labelledby' + plugin.id) -}}
+	</div>{{- '' -}}
+	<div class="description" id="{{ 'plugin_labelledby' + plugin.id }}">
+	  {{- _(plugin.description) -}}
+	</div>{{- '' -}}
+      </fieldset>
+    {%- endif -%}
+  {%- endfor -%}
 {%- endmacro -%}
 
 {%- macro engine_about(search_engine) -%}
@@ -90,7 +90,7 @@
   <td class="{{ label }}">{{- '' -}}
     {%- if stats[engine_name].time != None -%}
     <span class="stacked-bar-chart-value">{{- stats[engine_name].time -}}</span>{{- '' -}}
-    <span class="stacked-bar-chart" aria-labelledby="{{engine_name}}_chart" aria-hidden="true">
+    <span class="stacked-bar-chart" aria-hidden="true">
         {%- if max_rate95 is not none and max_rate95 > 0 -%}
         <div class="stacked-bar-chart-median bar{{ (100 * (stats[engine_name].time / max_rate95))|round }}"></div>{{- '' -}}
         <div class="stacked-bar-chart-rate80 bar{{ (100 * ((stats[engine_name].rate80 - stats[engine_name].time) / max_rate95))|round }}"></div>{{- '' -}}
@@ -127,8 +127,8 @@
   {%- if checker_result or errors -%}
     <td class="{{ label }} column-reliability">{{- '' -}}
       <a href="{{ url_for('stats', engine=engine_name|e) }}">{{- '' -}}
-        <span aria-labelledby="{{engine_name}}_reliability">
-          {{- icon_big('warning', 'The engine is not reliabled') }} {{ r -}}
+        <span>
+          {{- icon_big('alert', 'The engine is not reliabled') }} {{ r -}}
         </span>{{- '' -}}
       </a>{{- '' -}}
       <div class="engine-tooltip" role="tooltip" id="{{engine_name}}_reliability">
@@ -158,6 +158,7 @@
   <form id="search_form" method="post" action="{{ url_for('preferences') }}" autocomplete="off">
     {{- tabs_open() -}}
 
+    {# tab: general #}
 
     {{- tab_header('maintab', 'general', _('General'), True) -}}
     {%- if 'categories' not in locked_preferences -%}
@@ -173,16 +174,22 @@
     {%- if 'autocomplete' not in locked_preferences -%}
       {%- include 'simple/preferences/autocomplete.html' -%}
     {%- endif -%}
+    {%- if 'favicon' not in locked_preferences -%}
+      {%- include 'simple/preferences/favicon.html' -%}
+    {%- endif -%}
     {% if 'safesearch' not in locked_preferences %}
       {%- include 'simple/preferences/safesearch.html' -%}
     {%- endif -%}
+    {%- include 'simple/preferences/tokens.html' -%}
     {{- plugin_preferences('general') -}}
+
+
     {%- if 'doi_resolver' not in locked_preferences %}
       {%- include 'simple/preferences/doi_resolver.html' -%}
     {%- endif -%}
-    {%- include 'simple/preferences/tokens.html' -%}
     {{- tab_footer() -}}
 
+    {# tab: ui #}
 
     {{- tab_header('maintab', 'ui', _('User interface')) -}}
     {%- if 'locale' not in locked_preferences -%}
@@ -201,9 +208,11 @@
       {%- include 'simple/preferences/search_on_category_select.html' -%}
     {%- endif -%}
     {%- include 'simple/preferences/hotkeys.html' -%}
+    {%- include 'simple/preferences/urlformatting.html' -%}
     {{- plugin_preferences('ui') -}}
     {{- tab_footer() -}}
 
+    {# tab: privacy #}
 
     {{- tab_header('maintab', 'privacy', _('Privacy')) -}}
     {%- if 'method' not in locked_preferences -%}
@@ -218,6 +227,8 @@
     {{- plugin_preferences('privacy') -}}
     {{- tab_footer() -}}
 
+    {# tab: enignes #}
+
     {{- tab_header('maintab', 'engines', _('Engines')) -}}
     <p>
       {{- _('Currently used search engines') -}}
@@ -227,18 +238,23 @@
     {{- tabs_close() -}}
     {{- tab_footer() -}}
 
+    {# tab: query #}
 
     {{- tab_header('maintab', 'query', _('Special Queries')) -}}
-    {%- if answerers -%}
+    {%- if answer_storage -%}
       {%- include 'simple/preferences/answerers.html' -%}
     {%- endif -%}
     {{- tab_footer() -}}
 
+    {# tab: cookies #}
+
     {{- tab_header('maintab', 'cookies', _('Cookies')) -}}
     {%- include 'simple/preferences/cookies.html' -%}
     {{- tab_footer() -}}
-
     {{- tabs_close() -}}
+
+    {# footer with save & reset buttons #}
+
     {%- include 'simple/preferences/footer.html' -%}
 
   </form>{{- '' -}}

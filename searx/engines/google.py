@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """This is the implementation of the Google WEB engine.  Some of this
 implementations (manly the :py:obj:`get_google_info`) are shared by other
 engines:
@@ -26,6 +25,7 @@ from searx.locales import language_tag, region_tag, get_official_locales
 from searx.network import get  # see https://github.com/searxng/searxng/issues/762
 from searx.exceptions import SearxEngineCaptchaException
 from searx.enginelib.traits import EngineTraits
+from searx.result_types import EngineResults
 
 if TYPE_CHECKING:
     import logging
@@ -59,11 +59,6 @@ filter_mapping = {0: 'off', 1: 'medium', 2: 'high'}
 
 # specific xpath variables
 # ------------------------
-
-results_xpath = './/div[contains(@jscontroller, "SC7lYd")]'
-title_xpath = './/a/h3[1]'
-href_xpath = './/a[h3]/@href'
-content_xpath = './/div[@data-sncf]'
 
 # Suggestions are links placed in a *card-section*, we extract only the text
 # from the links not the links itself.
@@ -321,12 +316,12 @@ def _parse_data_images(dom):
     return data_image_map
 
 
-def response(resp):
+def response(resp) -> EngineResults:
     """Get response from google's search request"""
     # pylint: disable=too-many-branches, too-many-statements
     detect_google_sorry(resp)
 
-    results = []
+    results = EngineResults()
 
     # convert the text to dom
     dom = html.fromstring(resp.text)
@@ -335,48 +330,55 @@ def response(resp):
     # results --> answer
     answer_list = eval_xpath(dom, '//div[contains(@class, "LGOjhe")]')
     for item in answer_list:
-        results.append(
-            {
-                'answer': item.xpath("normalize-space()"),
-                'url': (eval_xpath(item, '../..//a/@href') + [None])[0],
-            }
+        for bubble in eval_xpath(item, './/div[@class="nnFGuf"]'):
+            bubble.drop_tree()
+        results.add(
+            results.types.Answer(
+                answer=extract_text(item),
+                url=(eval_xpath(item, '../..//a/@href') + [None])[0],
+            )
         )
 
     # parse results
 
-    for result in eval_xpath_list(dom, results_xpath):  # pylint: disable=too-many-nested-blocks
+    for result in eval_xpath_list(dom, './/div[contains(@jscontroller, "SC7lYd")]'):
+        # pylint: disable=too-many-nested-blocks
 
         try:
-            title_tag = eval_xpath_getindex(result, title_xpath, 0, default=None)
+            title_tag = eval_xpath_getindex(result, './/a/h3[1]', 0, default=None)
             if title_tag is None:
                 # this not one of the common google results *section*
                 logger.debug('ignoring item from the result_xpath list: missing title')
                 continue
             title = extract_text(title_tag)
 
-            url = eval_xpath_getindex(result, href_xpath, 0, None)
+            url = eval_xpath_getindex(result, './/a[h3]/@href', 0, None)
             if url is None:
                 logger.debug('ignoring item from the result_xpath list: missing url of title "%s"', title)
                 continue
 
-            content_nodes = eval_xpath(result, content_xpath)
+            content_nodes = eval_xpath(result, './/div[contains(@data-sncf, "1")]')
+            for item in content_nodes:
+                for script in item.xpath(".//script"):
+                    script.getparent().remove(script)
+
             content = extract_text(content_nodes)
 
             if not content:
                 logger.debug('ignoring item from the result_xpath list: missing content of title "%s"', title)
                 continue
 
-            img_src = content_nodes[0].xpath('.//img/@src')
-            if img_src:
-                img_src = img_src[0]
-                if img_src.startswith('data:image'):
+            thumbnail = content_nodes[0].xpath('.//img/@src')
+            if thumbnail:
+                thumbnail = thumbnail[0]
+                if thumbnail.startswith('data:image'):
                     img_id = content_nodes[0].xpath('.//img/@id')
                     if img_id:
-                        img_src = data_image_map.get(img_id[0])
+                        thumbnail = data_image_map.get(img_id[0])
             else:
-                img_src = None
+                thumbnail = None
 
-            results.append({'url': url, 'title': title, 'content': content, 'img_src': img_src})
+            results.append({'url': url, 'title': title, 'content': content, 'thumbnail': thumbnail})
 
         except Exception as e:  # pylint: disable=broad-except
             logger.error(e, exc_info=True)
@@ -440,7 +442,7 @@ def fetch_traits(engine_traits: EngineTraits, add_domains: bool = True):
         try:
             locale = babel.Locale.parse(lang_map.get(eng_lang, eng_lang), sep='-')
         except babel.UnknownLocaleError:
-            print("ERROR: %s -> %s is unknown by babel" % (x.get("data-name"), eng_lang))
+            print("INFO:  google UI language %s (%s) is unknown by babel" % (eng_lang, x.text.split("(")[0].strip()))
             continue
         sxng_lang = language_tag(locale)
 

@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Goodreads (books)
 """
 
@@ -49,7 +48,7 @@ def response(resp):
             {
                 'url': base_url + extract_text(eval_xpath(result, url_xpath)),
                 'title': extract_text(eval_xpath(result, title_xpath)),
-                'img_src': extract_text(eval_xpath(result, thumbnail_xpath)),
+                'thumbnail': extract_text(eval_xpath(result, thumbnail_xpath)),
                 'content': extract_text(eval_xpath(result, info_text_xpath)),
                 'metadata': extract_text(eval_xpath(result, author_xpath)),
             }

@@ -3,7 +3,7 @@
 {% macro engine_data_form(engine_data) -%}
     {% for engine_name, kv_data in engine_data.items() %}
         {% for k, v in kv_data.items() %}
-            <input type="hidden" name="engine_data-{{ engine_name }}-{{ k|e }}" value="{{ v|e }}" />
+            <input type="hidden" name="engine_data-{{ engine_name }}-{{ k|e }}" value="{{ v|e }}">
         {% endfor %}
     {% endfor %}
 {%- endmacro %}
@@ -19,18 +19,10 @@
 {% endif %}
 
 <div id="results" class="{{ only_template }}">
-    {% if answers -%}
-    <div id="answers" role="complementary" aria-labelledby="answers-title"><h4 class="title" id="answers-title">{{ _('Answers') }} : </h4>
-        {%- for answer in answers.values() -%}
-        <div class="answer">
-        <span>{{ answer.answer }}</span>
-          {% if answer.url -%}
-          <a href="{{ answer.url }}" class="answer-url">{{ urlparse(answer.url).hostname }}</a>
-          {% endif -%}
-        </div>
-        {%- endfor -%}
-    </div>
-    {%- endif %}
+
+  {%- if answers -%}
+    {%- include 'simple/elements/answers.html' -%}
+  {%- endif %}
 
     <div id="sidebar">
 
@@ -40,7 +32,7 @@
 
         {%- if infoboxes -%}
           <div id="infoboxes">
-            <details open class="sidebar-collapsable">
+            <details open class="sidebar-collapsible">
               <summary class="title">{{ _('Info') }}</summary>
               {%- for infobox in infoboxes -%}
                 {%- include 'simple/elements/infobox.html' -%}
@@ -53,42 +45,22 @@
           {%- include 'simple/elements/suggestions.html' -%}
         {%- endif -%}
 
+        {%- include 'simple/elements/engines_msg.html' -%}
+
         {%- if method == 'POST' -%}
           {%- include 'simple/elements/search_url.html' -%}
         {%- endif -%}
-
-        {%- if unresponsive_engines -%}
-          {%- include 'simple/elements/engines_msg.html' -%}
-	{%- endif -%}
 
         {%- if search_formats -%}
           {%- include 'simple/elements/apis.html' -%}
         {%- endif -%}
 
-        <div id="sidebar-end-collapsable"></div>
+        <div id="sidebar-end-collapsible"></div>
     </div>
 
-    {% if corrections %}
-    <div id="corrections" role="complementary" aria-labelledby="corrections-title">
-      <h4 id="corrections-title">{{ _('Try searching for:') }}</h4>
-      {% for correction in corrections %}
-      <div class="left">
-	      <form method="{{ method or 'POST' }}" action="{{ url_for('search') }}" role="navigation">
-          {% for category in selected_categories %}
-          <input type="hidden" name="category_{{ category }}" value="1">
-          {% endfor %}
-          <input type="hidden" name="q" value="{{ correction.url }}">
-          <input type="hidden" name="language" value="{{ current_language }}">
-          <input type="hidden" name="time_range" value="{{ time_range }}">
-          <input type="hidden" name="safesearch" value="{{ safesearch }}">
-          <input type="hidden" name="theme" value="{{ theme }}">
-          {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit }}" >{% endif %}
-          <input type="submit" role="link" value="{{ correction.title }}">
-	      </form>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
+    {%- if corrections -%}
+      {%- include 'simple/elements/corrections.html' -%}
+    {%- endif -%}
 
     <div id="urls" role="main">
     {% for result in results %}
@@ -102,7 +74,7 @@
     {% endif %}
     </div>
     <div id="backToTop">
-      <a href="#" aria-label="{{ _('Back to top') }}">{{ icon_small('chevron-up-outline') }}</a>
+      <a href="#" aria-label="{{ _('Back to top') }}">{{ icon_small('navigate-up') }}</a>
     </div>
     {% if paging %}
     <nav id="pagination" role="navigation">
@@ -120,7 +92,7 @@
                   <input type="hidden" name="theme" value="{{ theme }}" >
                   {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
                   {{- engine_data_form(engine_data) -}}
-                  <button role="link" type="submit">{{ icon_small('chevron-left') }} {{ _('Previous page') }}</button>
+                  <button role="link" type="submit">{{ icon_small('navigate-left') }} {{ _('Previous page') }}</button>
                 </div>
             </form>
         {% endif %}
@@ -138,7 +110,7 @@
                 <input type="hidden" name="theme" value="{{ theme }}" >
                 {% if timeout_limit %}<input type="hidden" name="timeout_limit" value="{{ timeout_limit|e }}" >{% endif %}
                 {{- engine_data_form(engine_data) -}}
-                <button role="link"  type="submit">{{ _('Next page') }} {{ icon_small('chevron-right') }}</button>
+                <button role="link"  type="submit">{{ _('Next page') }} {{ icon_small('navigate-right') }}</button>
               </div>
           </form>
         {%- endif -%}

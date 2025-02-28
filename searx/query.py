@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# pylint: disable=invalid-name, missing-module-docstring, missing-class-docstring
 
+from __future__ import annotations
 from abc import abstractmethod, ABC
 import re
 
@@ -191,7 +193,7 @@ class BangParser(QueryPartParser):
 
     def _parse(self, value):
         # check if prefix is equal with engine shortcut
-        if value in engine_shortcuts:
+        if value in engine_shortcuts:  # pylint: disable=consider-using-get
             value = engine_shortcuts[value]
 
         # check if prefix is equal with engine name
@@ -257,7 +259,7 @@ class RawTextQuery:
         FeelingLuckyParser,  # redirect to the first link in the results list
     ]
 
-    def __init__(self, query, disabled_engines):
+    def __init__(self, query: str, disabled_engines: list):
         assert isinstance(query, str)
         # input parameters
         self.query = query

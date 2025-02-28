@@ -61,7 +61,7 @@ working tree and release a ``make install`` to get a virtualenv with a
    $ make install
    PYENV     [virtualenv] installing ./requirements*.txt into local/py3
    ...
-   PYENV     [install] pip install -e 'searx[test]'
+   PYENV     [install] pip install --use-pep517 --no-build-isolation -e 'searx[test]'
    ...
    Successfully installed searxng-2023.7.19+a446dea1b
 
@@ -78,7 +78,7 @@ the check fails if you edit the requirements listed in
    ...
    PYENV     [virtualenv] installing ./requirements*.txt into local/py3
    ...
-   PYENV     [install] pip install -e 'searx[test]'
+   PYENV     [install] pip install --use-pep517 --no-build-isolation -e 'searx[test]'
    ...
    Successfully installed searxng-2023.7.19+a446dea1b
 
@@ -180,10 +180,13 @@ sources of the theme need to be rebuild.  You can do that by running::
 
   $ make themes.all
 
-Alternatively to ``themes.all`` you can run *live builds* of the theme you are
-modify (:ref:`make themes`)::
+..
+   ToDo: vite server is not implemented yet / will be done in a follow up PR
 
-  $ LIVE_THEME=simple make run
+   Alternatively to ``themes.all`` you can run *live builds* of the theme you are
+   modify (:ref:`make themes`)::
+
+    $ LIVE_THEME=simple make run
 
 .. _make format.python:
 

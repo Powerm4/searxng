@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Yahoo (News)
 
 Yahoo News is "English only" and do not offer localized nor language queries.
@@ -78,9 +77,9 @@ def response(resp):
         url = parse_url(url)
         title = extract_text(result.xpath('.//h4/a'))
         content = extract_text(result.xpath('.//p'))
-        img_src = eval_xpath_getindex(result, './/img/@data-src', 0, None)
+        thumbnail = eval_xpath_getindex(result, './/img/@data-src', 0, None)
 
-        item = {'url': url, 'title': title, 'content': content, 'img_src': img_src}
+        item = {'url': url, 'title': title, 'content': content, 'thumbnail': thumbnail}
 
         pub_date = extract_text(result.xpath('.//span[contains(@class,"s-time")]'))
         ago = AGO_RE.search(pub_date)

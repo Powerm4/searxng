@@ -33,19 +33,25 @@ ui:
 
 enabled_plugins:
   - 'Hash plugin'
-  - 'Self Informations'
+  - 'Self Information'
   - 'Tracker URL remover'
   - 'Ahmia blacklist'
-  # - 'Hostname replace'  # see hostname_replace configuration below
+  # - 'Hostnames plugin'  # see 'hostnames' configuration below
   # - 'Open Access DOI rewrite'
 
 # plugins:
 #   - only_show_green_results
 
-# hostname_replace:
-#
-#   # twitter --> nitter
-#   '(www\.)?twitter\.com$': 'nitter.net'
+# hostnames:
+#   replace:
+#     '(.*\.)?youtube\.com$': 'invidious.example.com'
+#     '(.*\.)?youtu\.be$': 'invidious.example.com'
+#   remove:
+#     - '(.*\.)?facebook.com$'
+#   low_priority:
+#     - '(.*\.)?google\.com$'
+#   high_priority:
+#     - '(.*\.)?wikipedia.org$'
 
 engines:
 

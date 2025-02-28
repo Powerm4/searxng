@@ -1,163 +1,106 @@
-# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# pylint: disable=missing-module-docstring,disable=missing-class-docstring,invalid-name
 
-from searx import (
-    plugins,
-    limiter,
-    botdetection,
-)
-
+import babel
 from mock import Mock
+
+import searx.plugins
+import searx.preferences
+import searx.results
+
+from searx.result_types import Result
+from searx.extended_types import sxng_request
+
 from tests import SearxTestCase
+
+plg_store = searx.plugins.PluginStorage()
+plg_store.load_builtins()
 
 
 def get_search_mock(query, **kwargs):
-    return Mock(search_query=Mock(query=query, **kwargs), result_container=Mock(answers=dict()))
+
+    lang = kwargs.get("lang", "en-US")
+    kwargs["pageno"] = kwargs.get("pageno", 1)
+    kwargs["locale"] = babel.Locale.parse(lang, sep="-")
+    user_plugins = kwargs.pop("user_plugins", [x.id for x in plg_store])
+
+    return Mock(
+        search_query=Mock(query=query, **kwargs),
+        user_plugins=user_plugins,
+        result_container=searx.results.ResultContainer(),
+    )
 
 
-class PluginMock:
-    default_on = False
-    name = 'Default plugin'
-    description = 'Default plugin description'
+def do_pre_search(query, storage, **kwargs) -> bool:
+
+    search = get_search_mock(query, **kwargs)
+    ret = storage.pre_search(sxng_request, search)
+    return ret
 
 
-class PluginStoreTest(SearxTestCase):
-    def test_PluginStore_init(self):
-        store = plugins.PluginStore()
-        self.assertTrue(isinstance(store.plugins, list) and len(store.plugins) == 0)
+def do_post_search(query, storage, **kwargs) -> Mock:
 
-    def test_PluginStore_register(self):
-        store = plugins.PluginStore()
-        testplugin = PluginMock()
-        store.register(testplugin)
-
-        self.assertTrue(len(store.plugins) == 1)
-
-    def test_PluginStore_call(self):
-        store = plugins.PluginStore()
-        testplugin = PluginMock()
-        store.register(testplugin)
-        setattr(testplugin, 'asdf', Mock())
-        request = Mock()
-        store.call([], 'asdf', request, Mock())
-
-        self.assertFalse(testplugin.asdf.called)  # pylint: disable=E1101
-
-        store.call([testplugin], 'asdf', request, Mock())
-        self.assertTrue(testplugin.asdf.called)  # pylint: disable=E1101
+    search = get_search_mock(query, **kwargs)
+    storage.post_search(sxng_request, search)
+    return search
 
 
-class SelfIPTest(SearxTestCase):
-    def test_PluginStore_init(self):
-        plugin = plugins.load_and_initialize_plugin('searx.plugins.self_info', False, (None, {}))
-        store = plugins.PluginStore()
-        store.register(plugin)
-        cfg = limiter.get_cfg()
-        botdetection.init(cfg, None)
+class PluginMock(searx.plugins.Plugin):
 
-        self.assertTrue(len(store.plugins) == 1)
+    def __init__(self, _id: str, name: str, default_on: bool):
+        self.id = _id
+        self.default_on = default_on
+        self._name = name
+        super().__init__()
 
-        # IP test
-        request = Mock()
-        request.remote_addr = '127.0.0.1'
-        request.headers = {'X-Forwarded-For': '1.2.3.4, 127.0.0.1', 'X-Real-IP': '127.0.0.1'}
-        search = get_search_mock(
-            query='ip',
-            pageno=1,
-        )
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue('127.0.0.1' in search.result_container.answers["ip"]["answer"])
+    # pylint: disable= unused-argument
+    def pre_search(self, request, search) -> bool:
+        return True
 
-        search = get_search_mock(query='ip', pageno=2)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertFalse('ip' in search.result_container.answers)
+    def post_search(self, request, search) -> None:
+        return None
 
-        # User agent test
-        request = Mock(user_agent='Mock')
+    def on_result(self, request, search, result) -> bool:
+        return False
 
-        search = get_search_mock(query='user-agent', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue('Mock' in search.result_container.answers["user-agent"]["answer"])
-
-        search = get_search_mock(query='user-agent', pageno=2)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertFalse('user-agent' in search.result_container.answers)
-
-        search = get_search_mock(query='user-agent', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue('Mock' in search.result_container.answers["user-agent"]["answer"])
-
-        search = get_search_mock(query='user-agent', pageno=2)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertFalse('user-agent' in search.result_container.answers)
-
-        search = get_search_mock(query='What is my User-Agent?', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue('Mock' in search.result_container.answers["user-agent"]["answer"])
-
-        search = get_search_mock(query='What is my User-Agent?', pageno=2)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertFalse('user-agent' in search.result_container.answers)
-
-
-class HashPluginTest(SearxTestCase):
-    def test_PluginStore_init(self):
-        store = plugins.PluginStore()
-        plugin = plugins.load_and_initialize_plugin('searx.plugins.hash_plugin', False, (None, {}))
-        store.register(plugin)
-
-        self.assertTrue(len(store.plugins) == 1)
-
-        request = Mock(remote_addr='127.0.0.1')
-
-        # MD5
-        search = get_search_mock(query='md5 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'md5 hash digest: 098f6bcd4621d373cade4e832627b4f6' in search.result_container.answers['hash']['answer']
+    def info(self):
+        return searx.plugins.PluginInfo(
+            id=self.id,
+            name=self._name,
+            description=f"Dummy plugin: {self.id}",
+            preference_section="general",
         )
 
-        search = get_search_mock(query=b'md5 test', pageno=2)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertFalse('hash' in search.result_container.answers)
 
-        # SHA1
-        search = get_search_mock(query='sha1 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'sha1 hash digest: a94a8fe5ccb19ba61c4c0873d391e9879'
-            '82fbbd3' in search.result_container.answers['hash']['answer']
-        )
+class PluginStorage(SearxTestCase):
 
-        # SHA224
-        search = get_search_mock(query='sha224 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'sha224 hash digest: 90a3ed9e32b2aaf4c61c410eb9254261'
-            '19e1a9dc53d4286ade99a809' in search.result_container.answers['hash']['answer']
-        )
+    def setUp(self):
+        super().setUp()
+        engines = {}
 
-        # SHA256
-        search = get_search_mock(query='sha256 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'sha256 hash digest: 9f86d081884c7d659a2feaa0c55ad015a'
-            '3bf4f1b2b0b822cd15d6c15b0f00a08' in search.result_container.answers['hash']['answer']
-        )
+        self.storage = searx.plugins.PluginStorage()
+        self.storage.register(PluginMock("plg001", "first plugin", True))
+        self.storage.register(PluginMock("plg002", "second plugin", True))
+        self.storage.init(self.app)
+        self.pref = searx.preferences.Preferences(["simple"], ["general"], engines, self.storage)
+        self.pref.parse_dict({"locale": "en"})
 
-        # SHA384
-        search = get_search_mock(query='sha384 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'sha384 hash digest: 768412320f7b0aa5812fce428dc4706b3c'
-            'ae50e02a64caa16a782249bfe8efc4b7ef1ccb126255d196047dfedf1'
-            '7a0a9' in search.result_container.answers['hash']['answer']
-        )
+    def test_init(self):
 
-        # SHA512
-        search = get_search_mock(query='sha512 test', pageno=1)
-        store.call(store.plugins, 'post_search', request, search)
-        self.assertTrue(
-            'sha512 hash digest: ee26b0dd4af7e749aa1a8ee3c10ae9923f6'
-            '18980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5'
-            'fa9ad8e6f57f50028a8ff' in search.result_container.answers['hash']['answer']
-        )
+        self.assertEqual(2, len(self.storage))
+
+    def test_hooks(self):
+
+        with self.app.test_request_context():
+            sxng_request.preferences = self.pref
+            query = ""
+
+            ret = do_pre_search(query, self.storage, pageno=1)
+            self.assertTrue(ret is True)
+
+            ret = self.storage.on_result(
+                sxng_request,
+                get_search_mock("lorem ipsum", user_plugins=["plg001", "plg002"]),
+                Result(),
+            )
+            self.assertFalse(ret)

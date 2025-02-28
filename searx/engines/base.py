@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+"""BASE (Scholar publications)
+
 """
- BASE (Scholar publications)
-"""
+from datetime import datetime
+import re
 
 from urllib.parse import urlencode
 from lxml import etree
-from datetime import datetime
-import re
 from searx.utils import searx_useragent
 
 # about
@@ -31,7 +31,7 @@ paging = True
 number_of_results = 10
 
 # shortcuts for advanced search
-shorcut_dict = {
+shortcut_dict = {
     # user-friendly keywords
     'format:': 'dcformat:',
     'author:': 'dccreator:',
@@ -55,13 +55,17 @@ shorcut_dict = {
 
 def request(query, params):
     # replace shortcuts with API advanced search keywords
-    for key in shorcut_dict.keys():
-        query = re.sub(key, shorcut_dict[key], query)
+    for key, val in shortcut_dict.items():
+        query = re.sub(key, val, query)
 
     # basic search
     offset = (params['pageno'] - 1) * number_of_results
 
-    string_args = dict(query=urlencode({'query': query}), offset=offset, hits=number_of_results)
+    string_args = {
+        'query': urlencode({'query': query}),
+        'offset': offset,
+        'hits': number_of_results,
+    }
 
     params['url'] = base_url.format(**string_args)
 
@@ -76,8 +80,10 @@ def response(resp):
 
     for entry in search_results.xpath('./result/doc'):
         content = "No description available"
-
+        url = ""
+        title = ""
         date = datetime.now()  # needed in case no dcdate is available for an item
+
         for item in entry:
             if item.attrib["name"] == "dcdate":
                 date = item.text
@@ -99,7 +105,7 @@ def response(resp):
             try:
                 publishedDate = datetime.strptime(date, date_format)
                 break
-            except:
+            except:  # pylint: disable=bare-except
                 pass
 
         if publishedDate is not None:

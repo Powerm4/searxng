@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Hackernews
 """
 
@@ -58,7 +57,11 @@ def request(query, params):
 
         if params['time_range']:
             search_type = 'search_by_date'
-            timestamp = (datetime.now() - relativedelta(**{f"{params['time_range']}s": 1})).timestamp()
+            timestamp = (
+                # pylint: disable=unexpected-keyword-arg
+                datetime.now()
+                - relativedelta(**{f"{params['time_range']}s": 1})  # type: ignore
+            ).timestamp()
             query_params["numericFilters"] = f"created_at_i>{timestamp}"
 
     params["url"] = f"{base_url}/{search_type}?{urlencode(query_params)}"
@@ -84,7 +87,7 @@ def response(resp):
                 "content": hit.get("url") or hit.get("comment_text") or hit.get("story_text") or "",
                 "metadata": metadata,
                 "author": hit["author"],
-                "publishedDate": datetime.utcfromtimestamp(hit["created_at_i"]),
+                "publishedDate": datetime.fromtimestamp(hit["created_at_i"]),
             }
         )
 

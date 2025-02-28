@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """Configuration class :py:class:`Config` with deep-update, schema validation
 and deprecated names.
 
@@ -14,7 +13,8 @@ import copy
 import typing
 import logging
 import pathlib
-import pytomlpp as toml
+
+from ..compat import tomllib
 
 __all__ = ['Config', 'UNSET', 'SchemaIssue']
 
@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 class FALSE:
-    """Class of ``False`` singelton"""
+    """Class of ``False`` singleton"""
 
     # pylint: disable=multiple-statements
     def __init__(self, msg):
@@ -62,7 +62,7 @@ class Config:
         # init schema
 
         log.debug("load schema file: %s", schema_file)
-        cfg = cls(cfg_schema=toml.load(schema_file), deprecated=deprecated)
+        cfg = cls(cfg_schema=toml_load(schema_file), deprecated=deprecated)
         if not cfg_file.exists():
             log.warning("missing config file: %s", cfg_file)
             return cfg
@@ -70,12 +70,7 @@ class Config:
         # load configuration
 
         log.debug("load config file: %s", cfg_file)
-        try:
-            upd_cfg = toml.load(cfg_file)
-        except toml.DecodeError as exc:
-            msg = str(exc).replace('\t', '').replace('\n', ' ')
-            log.error("%s: %s", cfg_file, msg)
-            raise
+        upd_cfg = toml_load(cfg_file)
 
         is_valid, issue_list = cfg.validate(upd_cfg)
         for msg in issue_list:
@@ -86,7 +81,7 @@ class Config:
         return cfg
 
     def __init__(self, cfg_schema: typing.Dict, deprecated: typing.Dict[str, str]):
-        """Construtor of class Config.
+        """Constructor of class Config.
 
         :param cfg_schema: Schema of the configuration
         :param deprecated: dictionary that maps deprecated configuration names to a messages
@@ -164,7 +159,7 @@ class Config:
         return pathlib.Path(str(val))
 
     def pyobj(self, name, default=UNSET):
-        """Get python object refered by full qualiffied name (FQN) in the config
+        """Get python object referred by full qualiffied name (FQN) in the config
         string."""
 
         fqn = self.get(name, default)
@@ -175,6 +170,16 @@ class Config:
         (modulename, name) = str(fqn).rsplit('.', 1)
         m = __import__(modulename, {}, {}, [name], 0)
         return getattr(m, name)
+
+
+def toml_load(file_name):
+    try:
+        with open(file_name, "rb") as f:
+            return tomllib.load(f)
+    except tomllib.TOMLDecodeError as exc:
+        msg = str(exc).replace('\t', '').replace('\n', ' ')
+        log.error("%s: %s", file_name, msg)
+        raise
 
 
 # working with dictionaries

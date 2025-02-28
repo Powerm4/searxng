@@ -35,13 +35,16 @@ source "$(dirname "${BASH_SOURCE[0]}")/utils/lib_go.sh"
 # shellcheck source=utils/lib_redis.sh
 source "$(dirname "${BASH_SOURCE[0]}")/utils/lib_redis.sh"
 
+# shellcheck source=utils/lib_sxng_vite.sh
+source "$(dirname "${BASH_SOURCE[0]}")/utils/lib_sxng_vite.sh"
+
 PATH="${REPO_ROOT}/node_modules/.bin:${PATH}"
 
 # config
 
 PYOBJECTS="searx"
 PY_SETUP_EXTRAS='[test]'
-GECKODRIVER_VERSION="v0.34.0"
+GECKODRIVER_VERSION="v0.35.0"
 # SPHINXOPTS=
 BLACK_OPTIONS=("--target-version" "py311" "--line-length" "120" "--skip-string-normalization")
 BLACK_TARGETS=("--exclude" "(searx/static|searx/languages.py)" "--include" 'searxng.msg|\.pyi?$' "searx" "searxng_extra" "tests")
@@ -52,33 +55,16 @@ if [ -S "${_dev_redis_sock}" ] && [ -z "${SEARXNG_REDIS_URL}" ]; then
     export SEARXNG_REDIS_URL="unix://${_dev_redis_sock}?db=0"
 fi
 
-pylint.FILES() {
-
-    # List files tagged by comment:
-    #
-    #   # lint: pylint
-    #
-    # These py files are linted by test.pylint()
-
-    grep -l -r --include \*.py '^#[[:blank:]]*lint:[[:blank:]]*pylint' searx searxng_extra tests
-    find . -name searxng.msg
-}
-
 YAMLLINT_FILES=()
 while IFS= read -r line; do
-   YAMLLINT_FILES+=("$line")
-done <<< "$(git ls-files './tests/*.yml' './searx/*.yml' './utils/templates/etc/searxng/*.yml')"
+    if [ "$line" != "tests/unit/settings/syntaxerror_settings.yml" ]; then
+        YAMLLINT_FILES+=("$line")
+    fi
+done <<< "$(git ls-files './tests/*.yml' './searx/*.yml' './utils/templates/etc/searxng/*.yml' '.github/*.yml' '.github/*/*.yml')"
 
 RST_FILES=(
     'README.rst'
 )
-
-PYLINT_SEARXNG_DISABLE_OPTION="\
-I,C,R,\
-W0105,W0212,W0511,W0603,W0613,W0621,W0702,W0703,W1401,\
-E1136"
-PYLINT_ADDITIONAL_BUILTINS_FOR_ENGINES="traits,supported_languages,language_aliases,logger,categories"
-PYLINT_OPTIONS="-m pylint -j 0 --rcfile .pylintrc"
 
 help() {
     nvm.help
@@ -111,8 +97,6 @@ pyenv.:
   OK        : test if virtualenv is OK
 format.:
   python    : format Python code source using black
-pygments.:
-  less      : build LESS files for pygments
 EOF
     go.help
     node.help
@@ -121,6 +105,7 @@ EOF
     test.help
     themes.help
     static.help
+    vite.help
     cat <<EOF
 environment ...
   SEARXNG_REDIS_URL : ${SEARXNG_REDIS_URL}
@@ -250,7 +235,7 @@ gecko.driver() {
             build_msg INSTALL "geckodriver already installed"
             return
         fi
-        PLATFORM="$(python3 -c 'import platform; print(platform.system().lower(), platform.architecture()[0])')"
+        PLATFORM="$(python -c 'import platform; print(platform.system().lower(), platform.architecture()[0])')"
         case "$PLATFORM" in
             "linux 32bit" | "linux2 32bit") ARCH="linux32";;
             "linux 64bit" | "linux2 64bit") ARCH="linux64";;
@@ -268,15 +253,6 @@ gecko.driver() {
         chmod 755 -- "${PY_ENV_BIN}/geckodriver"
     )
     dump_return $?
-}
-
-pygments.less() {
-    build_msg PYGMENTS "searxng_extra/update/update_pygments.py"
-    if ! pyenv.cmd python searxng_extra/update/update_pygments.py; then
-        build_msg PYGMENTS "building LESS files for pygments failed"
-        return 1
-    fi
-    return 0
 }
 
 py.build() {
@@ -316,8 +292,8 @@ pyenv.install() {
 
     (   set -e
         pyenv
-        build_msg PYENV "[install] pip install -e 'searx${PY_SETUP_EXTRAS}'"
-        "${PY_ENV_BIN}/python" -m pip install -e ".${PY_SETUP_EXTRAS}"
+        build_msg PYENV "[install] pip install --use-pep517 --no-build-isolation -e 'searx${PY_SETUP_EXTRAS}'"
+        "${PY_ENV_BIN}/python" -m pip install --use-pep517 --no-build-isolation -e ".${PY_SETUP_EXTRAS}"
     )
     local exit_val=$?
     if [ ! $exit_val -eq 0 ]; then
@@ -338,11 +314,17 @@ format.python() {
     dump_return $?
 }
 
-
-PYLINT_FILES=()
-while IFS= read -r line; do
-   PYLINT_FILES+=("$line")
-done <<< "$(pylint.FILES)"
+docs.prebuild() {
+    build_msg DOCS "build ${DOCS_BUILD}/includes"
+    (
+        set -e
+        [ "$VERBOSE" = "1" ] && set -x
+        mkdir -p "${DOCS_BUILD}/includes"
+        ./utils/searxng.sh searxng.doc.rst >  "${DOCS_BUILD}/includes/searxng.rst"
+        pyenv.cmd searxng_extra/docs_prebuild
+    )
+    dump_return $?
+}
 
 # shellcheck disable=SC2119
 main() {

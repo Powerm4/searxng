@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """BT4G_ (bt4g.com) is not a tracker and doesn't store any content and only
 collects torrent metadata (such as file names and file sizes) and a magnet link
 (torrent identifier).
@@ -37,13 +36,10 @@ Implementations
 
 """
 
-import re
 from datetime import datetime
 from urllib.parse import quote
 
 from lxml import etree
-
-from searx.utils import get_torrent_size
 
 # about
 about = {
@@ -104,8 +100,6 @@ def response(resp):
         title = entry.find("title").text
         link = entry.find("guid").text
         fullDescription = entry.find("description").text.split('<br>')
-        filesize = fullDescription[1]
-        filesizeParsed = re.split(r"([A-Z]+)", filesize)
         magnetlink = entry.find("link").text
         pubDate = entry.find("pubDate").text
         results.append(
@@ -115,7 +109,7 @@ def response(resp):
                 'magnetlink': magnetlink,
                 'seed': 'N/A',
                 'leech': 'N/A',
-                'filesize': get_torrent_size(filesizeParsed[0], filesizeParsed[1]),
+                'filesize': fullDescription[1],
                 'publishedDate': datetime.strptime(pubDate, '%a,%d %b %Y %H:%M:%S %z'),
                 'template': 'torrent.html',
             }

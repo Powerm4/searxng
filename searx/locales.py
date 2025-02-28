@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """
 SearXNG’s locale data
 =====================
@@ -37,13 +35,14 @@ from babel.support import Translations
 import babel.languages
 import babel.core
 import flask_babel
-import flask
 from flask.ctx import has_request_context
+
 from searx import (
     data,
     logger,
     searx_dir,
 )
+from searx.extended_types import sxng_request
 
 logger = logger.getChild('locales')
 
@@ -87,13 +86,13 @@ Kong."""
 def localeselector():
     locale = 'en'
     if has_request_context():
-        value = flask.request.preferences.get_value('locale')
+        value = sxng_request.preferences.get_value('locale')
         if value:
             locale = value
 
     # first, set the language that is not supported by babel
     if locale in ADDITIONAL_TRANSLATIONS:
-        flask.request.form['use-translation'] = locale
+        sxng_request.form['use-translation'] = locale
 
     # second, map locale to a value python-babel supports
     locale = LOCALE_BEST_MATCH.get(locale, locale)
@@ -111,7 +110,7 @@ def localeselector():
 def get_translations():
     """Monkey patch of :py:obj:`flask_babel.get_translations`"""
     if has_request_context():
-        use_translation = flask.request.form.get('use-translation')
+        use_translation = sxng_request.form.get('use-translation')
         if use_translation in ADDITIONAL_TRANSLATIONS:
             babel_ext = flask_babel.current_app.extensions['babel']
             return Translations.load(babel_ext.translation_directories[0], use_translation)
@@ -122,7 +121,7 @@ _TR_LOCALES: list[str] = []
 
 
 def get_translation_locales() -> list[str]:
-    """Returns the list of transaltion locales (*underscore*).  The list is
+    """Returns the list of translation locales (*underscore*).  The list is
     generated from the translation folders in :origin:`searx/translations`"""
 
     global _TR_LOCALES  # pylint:disable=global-statement
@@ -154,7 +153,7 @@ def locales_initialize():
 def region_tag(locale: babel.Locale) -> str:
     """Returns SearXNG's region tag from the locale (e.g. zh-TW , en-US)."""
     if not locale.territory:
-        raise ValueError('%s missed a territory')
+        raise ValueError('babel.Locale %s: missed a territory' % locale)
     return locale.language + '-' + locale.territory
 
 

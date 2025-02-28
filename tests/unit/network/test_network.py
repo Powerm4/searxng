@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-
-from mock import patch
+# pylint: disable=missing-module-docstring,disable=missing-class-docstring,invalid-name
 
 import httpx
+from mock import patch
 
-from searx.network.network import Network, NETWORKS, initialize
+from searx.network.network import Network, NETWORKS
 from tests import SearxTestCase
 
 
 class TestNetwork(SearxTestCase):
-    def setUp(self):
-        initialize()
+    # pylint: disable=protected-access
 
     def test_simple(self):
         network = Network()
@@ -125,11 +124,14 @@ class TestNetworkRequestRetries(SearxTestCase):
 
     TEXT = 'Lorem Ipsum'
 
+    def setUp(self):
+        self.init_test_settings()
+
     @classmethod
     def get_response_404_then_200(cls):
         first = True
 
-        async def get_response(*args, **kwargs):
+        async def get_response(*args, **kwargs):  # pylint: disable=unused-argument
             nonlocal first
             if first:
                 first = False
@@ -169,7 +171,7 @@ class TestNetworkRequestRetries(SearxTestCase):
     async def test_retries_exception_then_200(self):
         request_count = 0
 
-        async def get_response(*args, **kwargs):
+        async def get_response(*args, **kwargs):  # pylint: disable=unused-argument
             nonlocal request_count
             request_count += 1
             if request_count < 3:
@@ -198,11 +200,14 @@ class TestNetworkStreamRetries(SearxTestCase):
 
     TEXT = 'Lorem Ipsum'
 
+    def setUp(self):
+        self.init_test_settings()
+
     @classmethod
     def get_response_exception_then_200(cls):
         first = True
 
-        def stream(*args, **kwargs):
+        def stream(*args, **kwargs):  # pylint: disable=unused-argument
             nonlocal first
             if first:
                 first = False
@@ -228,7 +233,7 @@ class TestNetworkStreamRetries(SearxTestCase):
     async def test_retries_exception(self):
         first = True
 
-        def stream(*args, **kwargs):
+        def stream(*args, **kwargs):  # pylint: disable=unused-argument
             nonlocal first
             if first:
                 first = False

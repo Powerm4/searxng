@@ -1,5 +1,4 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# lint: pylint
 """SQLite is a small, fast and reliable SQL database engine.  It does not require
 any extra dependency.
 
@@ -42,8 +41,13 @@ import sqlite3
 import contextlib
 
 engine_type = 'offline'
+
 database = ""
+"""Filename of the SQLite DB."""
+
 query_str = ""
+"""SQL query that returns the result items."""
+
 limit = 10
 paging = True
 result_template = 'key-value.html'
